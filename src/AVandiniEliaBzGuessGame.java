@@ -1,5 +1,7 @@
+import java.awt.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.pow;
 
@@ -9,6 +11,7 @@ import static java.lang.Math.pow;
 enum CommandCategory {
     BASIC,
     INGAME,
+    STORE,
     SECRET
 }
 
@@ -155,11 +158,11 @@ class InvalidInputException extends Exception {
  * Class to serialize and manage game state.
  */
 class GameSerilizer implements Serializable {
-    int highscore = 0;
+    long highscore = 0;
     ArrayList<Game> games = new ArrayList<Game>();
     Game current_game;
 
-    public GameSerilizer(int highscore, ArrayList<Game> games, Game current_game) {
+    public GameSerilizer(long highscore, ArrayList<Game> games, Game current_game) {
         this.highscore = highscore;
         this.games = games;
         this.current_game = current_game;
@@ -197,9 +200,11 @@ class GameSerilizer implements Serializable {
  * Main class for the BzGuessGame.
  */
 class AVandiniEliaBzGuessGame {
+    public static final String Author = "Eia Vandini";
+    public static final String Version = "v1.34";
     static char[] options = {'A', 'B', 'C', 'D', 'E', 'F'};
-    static int highscore = 0;
-    static Command[] comands = new Command[]{new CommandHelp(), new CommandP(), new CommandSetCode(), new CommandBuy(), new CommandQuit(), new CommandNew(), new CommandHistory(), new CommandRules(), new CommandClose()};
+    static long highscore = 0;
+    static Command[] comands = new Command[]{new CommandHelp(), new CommandP(), new CommandSetCode(), new CommandRemains(), new CommandBuy(), new CommandQuit(), new CommandNew(), new CommandHistory(), new CommandRules(), new CommandClose(), new CommandBuyAI(), new CommandAI(), new CommandUnlimitedAttempts()};
     static ArrayList<Game> games = new ArrayList<Game>();
     static Game current_game;
     static GameSerilizer gameSerilizer = new GameSerilizer(highscore, games, current_game);
@@ -226,9 +231,16 @@ class AVandiniEliaBzGuessGame {
                 highscore = gameSerilizer.highscore;
                 games = gameSerilizer.games;
                 current_game = gameSerilizer.current_game;
-                current_game.gameloop();
-            } catch (ClassNotFoundException | IOException e) {
+                if (current_game.won || current_game.lost) {
+                    newGame();
+                } else {
+                    current_game.gameloop();
+                }
+            } catch (Exception e) {
+                setAttribute(FColors.YELLOW);
                 System.out.println("WARNING: unable to read gamestate");
+                resetAttrributes();
+                newGame();
             }
         } else {
             newGame();
@@ -245,7 +257,9 @@ class AVandiniEliaBzGuessGame {
         try {
             GameSerilizer.saveGameState(gameSerilizer, "GameState.ser");
         } catch (IOException e) {
+            setAttribute(FColors.YELLOW);
             System.out.println("WARNING: unable to save gamestate");
+            resetAttrributes();
         }
     }
 
@@ -255,13 +269,7 @@ class AVandiniEliaBzGuessGame {
     static void greeting() {
         System.out.println("Programmed by Vandini Elia");
         new CommandHelp().exec(new String[]{""});
-    }
-
-    /**
-     * Displays the game rules.
-     */
-    static void rules() {
-        System.out.println("rules");
+        AVandiniEliaBzGuessGame.eraseLinesUp(2);
     }
 
     /**
@@ -273,10 +281,26 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
+     * Displays the win screen with score.
+     */
+    static void aiWinScreen() {
+        System.out.println("Hypothetical score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
+        askIfPlayAgain();
+    }
+
+    /**
      * Displays the lose screen with the secret code.
      */
     static void loosescreen() {
         System.out.println("You lost! Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
+        askIfPlayAgain();
+    }
+
+    /**
+     * Displays the lose screen with the secret code.
+     */
+    static void aiLooseScreen() {
+        System.out.println("Not even the AI could save you☠\uFE0F. Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
         askIfPlayAgain();
     }
 
@@ -455,6 +479,8 @@ class CommandHelp extends Command {
                 System.out.println(help_string);
             }
         }
+        System.out.println();
+        System.out.println("Software by " + AVandiniEliaBzGuessGame.Author + ". Version " + AVandiniEliaBzGuessGame.Version);
     }
 }
 
@@ -473,25 +499,24 @@ class CommandRules extends Command {
     }
 
     void exec(String[] args) {
-        System.out.println("====================================");
-        System.out.println("           BzGuessGame Help         ");
-        System.out.println();
-        System.out.println("Welcome to my BzGuessGame! Your goal is to guess the secret code.");
-        System.out.println();
-        System.out.println("Rules:");
-        System.out.println("- The secret code consists of 4 characters from {a, b, c, d, e, f}.");
-        System.out.println("- Characters can appear zero to four times.");
-        System.out.println("- You have 20 attempts to guess the code.");
-        System.out.println("- After each guess, you'll receive feedback:");
-        System.out.println("  X: Correct character at the correct position.");
-        System.out.println("  -: Correct character but at the wrong position.");
-        System.out.println();
-        System.out.println("Check out available commands with .help or .h!");
-        System.out.println("to execute a command prefix a '.' before the command.");
-        System.out.println("'HELP' will be interpreted as a guess while '.help' or '.h' is a command.");
-        System.out.println();
-        System.out.println("Good luck!");
-        System.out.println("====================================");
+        System.out.println("╔═══════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                             BzGuessGame Help                              ║");
+        System.out.println("║                                                                           ║");
+        System.out.println("║ Welcome to my BzGuessGame! Your goal is to guess the secret code.         ║");
+        System.out.println("║                                                                           ║");
+        System.out.println("║ - The secret code consists of 4 characters from {a, b, c, d, e, f}.       ║");
+        System.out.println("║ - Characters can appear zero to four times.                               ║");
+        System.out.println("║ - You have 20 attempts to guess the code.                                 ║");
+        System.out.println("║ - After each guess, you'll receive feedback:                              ║");
+        System.out.println("║   X: Correct character at the correct position.                           ║");
+        System.out.println("║   -: Correct character but at the wrong position.                         ║");
+        System.out.println("║                                                                           ║");
+        System.out.println("║ Check out available commands with .help or .h!                            ║");
+        System.out.println("║ To execute a command prefix a '.' before the command.                     ║");
+        System.out.println("║ 'HELP' will be interpreted as a guess while '.help' or '.h' is a command. ║");
+        System.out.println("║                                                                           ║ ");
+        System.out.println("║ Good luck!                                                                ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════════════════╝ ");
     }
 }
 
@@ -584,7 +609,7 @@ class CommandSetCode extends Command {
         super();
         category = CommandCategory.SECRET;
         longc = "setcode";
-        shortc = "t";
+        shortc = "S";
         description = "set the secret code to a user input";
         fullName = "SetCode";
     }
@@ -623,7 +648,7 @@ class CommandBuy extends Command {
 
     CommandBuy() {
         super();
-        category = CommandCategory.INGAME;
+        category = CommandCategory.STORE;
         longc = "buy";
         shortc = "b";
         description = "Buy one letter of the secret code at its right position. Costs 5 attempts";
@@ -635,6 +660,8 @@ class CommandBuy extends Command {
         char[] res_string = {'_', '_', '_', '_'};
         int pos = r.nextInt(4);
         res_string[pos] = AVandiniEliaBzGuessGame.current_game.code[pos];
+
+        AVandiniEliaBzGuessGame.current_game.solver.possibleCodes.removeIf(n -> n[pos] != AVandiniEliaBzGuessGame.current_game.code[pos]);
 
         AVandiniEliaBzGuessGame.current_game.attempts_left -= 5;
         AVandiniEliaBzGuessGame.current_game.history += AVandiniEliaBzGuessGame.current_game.attempts_left + "> The User bought " + Arrays.toString(res_string) + " using up 5 attempts\n";
@@ -651,7 +678,7 @@ class CommandHistory extends Command {
         super();
         category = CommandCategory.INGAME;
         longc = "history";
-        shortc = "s";
+        shortc = "H";
         description = "Show history of all guesses and evaluations of past games";
         fullName = "History";
     }
@@ -677,6 +704,8 @@ class CommandHistory extends Command {
                 sb.append("____ | ");
             }
             sb.append(g.attempts_left).append(" | ");
+            sb.append(g.score);
+            sb.append(g.attempts_left).append(" | ");
             sb.append(g.start_date);
             System.out.println(sb);
         }
@@ -694,17 +723,122 @@ class CommandHistory extends Command {
     }
 }
 
+class CommandAI extends Command {
+
+    CommandAI() {
+        super();
+        category = CommandCategory.STORE;
+        longc = "ai";
+        shortc = "a";
+        description = "plays the game for you";
+        fullName = "AI";
+    }
+
+    void exec(String[] args) {
+        try {
+            Game g = AVandiniEliaBzGuessGame.current_game;
+            g.ai = true;
+            g.history += "Player activated AI.\n";
+            while (!g.won && !g.lost) {
+                AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.RED, TextAttributes.BRIGHT});
+                System.out.print(g.attempts_left + ">");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                char[] nextGuess = g.solver.minimaxBestGuess(g.matches, g.guesses);
+                for (char c : nextGuess) {
+                    TimeUnit.MILLISECONDS.sleep(250);
+                    System.out.print(c);
+                }
+                TimeUnit.MILLISECONDS.sleep(250);
+                System.out.println();
+                String res = g.parseGuess(new String(nextGuess));
+                System.out.println(res);
+                g.attempts_left--;
+                if (g.attempts_left <= 0) {
+                    g.lost = true;
+                }
+                AVandiniEliaBzGuessGame.saveGameState();
+            }
+        } catch (InvalidInputException e) {
+            System.out.println(e.getMessage());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+class CommandBuyAI extends Command {
+
+    CommandBuyAI() {
+        super();
+        category = CommandCategory.STORE;
+        longc = "bai";
+        shortc = "B";
+        description = "Uses \uD83C\uDF1FAI\uD83C\uDF1F to generate a optimal guess. Costs 5 attempts, no API key needed.";
+        fullName = "Buy AI guess";
+    }
+
+    void exec(String[] args) throws InvalidInputException {
+        Game g = AVandiniEliaBzGuessGame.current_game;
+        g.attempts_left -= 5;
+        char[] nextGuess = g.solver.minimaxBestGuess(g.matches, g.guesses);
+        g.history += "User generated a optimal guess: " + new String(nextGuess) + ", using up 5 attempts\n";
+        System.out.println("Sure, here is a optimal 4-letter guess: [" + new String(nextGuess) + "] . let me know if you have anymore questions!");
+    }
+}
+
+class CommandRemains extends Command {
+
+    CommandRemains() {
+        super();
+        category = CommandCategory.STORE;
+        longc = "remains";
+        shortc = "R";
+        description = "counts available solutions based on the guesse's feedback. Costs 2 attempts";
+        fullName = "Remains";
+    }
+
+    void exec(String[] args) throws InvalidInputException {
+        Game g = AVandiniEliaBzGuessGame.current_game;
+        int solution_count = g.solver.reduceCodes(g.matches, g.guesses);
+        g.attempts_left--;
+        g.attempts_left--;
+        g.history += "Game counted " + solution_count + " possible solutions still available based on guess feedback. 2 attempts where used up\n";
+        System.out.println("Based on past guesses feedback there are " + solution_count + " viable solutions.");
+    }
+}
+
+class CommandUnlimitedAttempts extends Command {
+
+    CommandUnlimitedAttempts() {
+        super();
+        category = CommandCategory.SECRET;
+        longc = "attempthack";
+        shortc = "u";
+        description = "gives you (almost) unlimited attempts";
+        fullName = "Unlimited attempts";
+    }
+
+    void exec(String[] args) throws InvalidInputException {
+        Game g = AVandiniEliaBzGuessGame.current_game;
+        g.attempts_left = Long.MAX_VALUE;
+    }
+}
+
 /**
  * Class representing a game instance.
  */
 class Game implements Serializable {
     char[] code = new char[4];
-    int attempts_left = 20;
+    long attempts_left = 20L;
     String history = "";
     boolean won = false;
     boolean lost = false;
     Date start_date = new Date();
-    int score = 0;
+    long score = 0;
+    Solver solver = new Solver();
+    ArrayList<Point> matches = new ArrayList<Point>();
+    ArrayList<char[]> guesses = new ArrayList<char[]>();
+    boolean ai = false;
 
     public Game() {
         Random r = new Random();
@@ -726,7 +860,9 @@ class Game implements Serializable {
      */
     void gameloop() {
         while (!lost && !won) {
+
             execeTurn();
+            AVandiniEliaBzGuessGame.saveGameState();
             if (AVandiniEliaBzGuessGame.current_game != this) {
                 return;
             }
@@ -767,8 +903,9 @@ class Game implements Serializable {
      */
     void parseCommand(String input, String[] args) throws InvalidInputException {
         for (Command command : AVandiniEliaBzGuessGame.comands) {
-            if (command.shortc.equals(input) || command.longc.equals(input)) {
+            if (command.shortc.equals(input) || command.longc.equalsIgnoreCase(input)) {
                 command.exec(args);
+                AVandiniEliaBzGuessGame.saveGameState();
                 return;
             }
         }
@@ -794,13 +931,13 @@ class Game implements Serializable {
             if (input.length() != 4) {
                 throw new InvalidInputException("input must be 4 characters long");
             }
-            for (char l : input.toCharArray()) {
-                for (int i = 0; i < AVandiniEliaBzGuessGame.options.length; i++) {
-                    if (l != AVandiniEliaBzGuessGame.options[i]) {
-                        throw new InvalidInputException("input must consist of A, B, C, D, E or F");
-                    }
-                }
-            }
+//            for (char l : input.toUpperCase().toCharArray()) {
+//                for (int i = 0; i < AVandiniEliaBzGuessGame.options.length; i++) {
+//                    if (l != AVandiniEliaBzGuessGame.options[i]) {
+//                        throw new InvalidInputException("input must consist of A, B, C, D, E or F");
+//                    }
+//                }
+//            }
             System.out.println(parseGuess(input));
             attempts_left--;
             if (attempts_left <= 0) {
@@ -826,32 +963,39 @@ class Game implements Serializable {
      * @return the result of the guess
      */
     String parseGuess(String input) {
-        int score = 0;
+        Point p = checkGuess(code, input.toCharArray());
         StringBuilder result = new StringBuilder();
-        boolean[] cleared = {false, false, false, false};
-        for (int i = 0; i < 4; i++) {
-            if (code[i] == Character.toUpperCase(input.charAt(i))) {
-                result.append('X');
-                cleared[i] = true;
-                score++;
-            }
-        }
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                if (code[i] == Character.toUpperCase(input.charAt(j))) {
-                    if (cleared[j] || cleared[i]) {
-                        continue;
-                    }
-                    result.append('-');
-                }
-            }
-        }
-        if (score >= 4) {
+        result.append("X".repeat(Math.max(0, p.x)));
+        result.append("-".repeat(Math.max(0, p.y)));
+        matches.add(p);
+        guesses.add(input.toCharArray());
+        if (p.x >= 4) {
             won = true;
         }
         AVandiniEliaBzGuessGame.current_game.history += attempts_left + ">" + input + " " + result + '\n';
-
         return result.toString();
+    }
+
+    static Point checkGuess(char[] code, char[] input) {
+        Point p = new Point(0, 0);
+        boolean[] cleared = {false, false, false, false};
+        for (int j = 0; j < 4; j++) {
+            if (code[j] == Character.toUpperCase(input[j])) {
+                cleared[j] = true;
+                p.x++;
+            }
+        }
+        for (int j = 0; j < 4; j++) {
+            for (int k = 0; k < 4; k++) {
+                if (cleared[k] || cleared[j]) {
+                    continue;
+                }
+                if (code[k] == Character.toUpperCase(input[j])) {
+                    p.y++;
+                }
+            }
+        }
+        return p;
     }
 
     /**
@@ -876,16 +1020,116 @@ class Game implements Serializable {
     void finishGame() {
         if (won) {
             long diff = Math.abs(new Date().getTime() - this.start_date.getTime());
-            score = score_calc(diff, attempts_left);
-            if (score > AVandiniEliaBzGuessGame.highscore) {
+            score = score_calc(diff, (int) attempts_left);
+            if (score > AVandiniEliaBzGuessGame.highscore && !AVandiniEliaBzGuessGame.current_game.ai) {
                 AVandiniEliaBzGuessGame.highscore = score;
             }
-            AVandiniEliaBzGuessGame.winScreen();
+            if (AVandiniEliaBzGuessGame.current_game.ai) {
+                AVandiniEliaBzGuessGame.aiWinScreen();
+                AVandiniEliaBzGuessGame.current_game.score = 0;
+            } else {
+                AVandiniEliaBzGuessGame.winScreen();
+            }
         } else {
             score = 0;
-            AVandiniEliaBzGuessGame.loosescreen();
+            if (AVandiniEliaBzGuessGame.current_game.ai) {
+                AVandiniEliaBzGuessGame.aiLooseScreen();
+            } else {
+                AVandiniEliaBzGuessGame.loosescreen();
+            }
         }
     }
 }
 
+class Solver implements Serializable {
+    ArrayList<char[]> possibleCodes;
+
+    Solver() {
+        possibleCodes = getPopulateCodes();
+    }
+
+    static ArrayList<char[]> getPopulateCodes() {
+        ArrayList<char[]> genCodes = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 6; j++) {
+                for (int k = 0; k < 6; k++) {
+                    for (int l = 0; l < 6; l++) {
+                        char[] newCode = new char[]{AVandiniEliaBzGuessGame.options[i], AVandiniEliaBzGuessGame.options[j], AVandiniEliaBzGuessGame.options[k], AVandiniEliaBzGuessGame.options[l]};
+                        boolean duplicate = false;
+                        for (char[] existing : genCodes) {
+                            if (Arrays.equals(existing, newCode)) {
+                                duplicate = true;
+                                break;
+                            }
+                        }
+                        if (!duplicate) {
+                            genCodes.add(newCode);
+                        }
+                    }
+                }
+            }
+        }
+        return genCodes;
+    }
+
+    static ArrayList<Point> mockGame(char[] code, ArrayList<char[]> guesses) {
+        ArrayList<Point> res = new ArrayList<Point>();
+        for (int i = 0; i < guesses.size(); i++) {
+            res.add(Game.checkGuess(code, guesses.get(i)));
+        }
+        return res;
+    }
+
+    static boolean equalMatches(char[] code, ArrayList<Point> p1, ArrayList<char[]> guesses) {
+        ArrayList<Point> p2 = mockGame(code, guesses);
+        boolean res = p1.equals(p2);
+        return !res;
+    }
+
+    int reduceCodes(ArrayList<Point> matches, ArrayList<char[]> guesses) throws InvalidInputException {
+        if (matches.size() != guesses.size()) {
+            throw new InvalidInputException("param size mismatch");
+        }
+        if (matches.isEmpty()) {
+            return possibleCodes.size();
+        }
+//        populateCodes();
+        possibleCodes.removeIf(n -> equalMatches(n, matches, guesses));
+        return possibleCodes.size();
+    }
+
+    char[] minimaxBestGuess(ArrayList<Point> matches, ArrayList<char[]> guesses) throws InvalidInputException {
+        if (matches.size() != guesses.size()) {
+            throw new InvalidInputException("param size mismatch");
+        }
+        if (matches.isEmpty() && possibleCodes.size() == 1296) {
+            return new char[]{'A', 'A', 'B', 'B'};
+        }
+        reduceCodes(matches, guesses);
+        if (possibleCodes.size() == 1) {
+            return possibleCodes.getFirst();
+        }
+        int lowest_worst_score = Integer.MAX_VALUE;
+        char[] lowest_worst_score_code = new char[]{'A', 'A', 'B', 'B'};
+        for (char[] guess : getPopulateCodes()) {
+//            if (guesses.contains(guess)) {
+//                continue;
+//            }
+            Map<Point, Integer> counter = new HashMap<>();
+            for (char[] code : possibleCodes) {
+                Point p = Game.checkGuess(code, guess);
+
+                counter.put(p, counter.getOrDefault(p, 0) + 1);
+            }
+            int highest;
+            if (counter.values().stream().max(Integer::compare).isPresent()) {
+                highest = counter.values().stream().max(Integer::compare).get();
+                if (highest < lowest_worst_score) {
+                    lowest_worst_score_code = guess;
+                    lowest_worst_score = highest;
+                }
+            }
+        }
+        return lowest_worst_score_code;
+    }
 }
