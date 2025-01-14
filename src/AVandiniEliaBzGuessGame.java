@@ -22,6 +22,26 @@ interface AbstarctAttributes {
     int getIndex();
 }
 
+enum CursorStyles implements AbstarctAttributes {
+    BLINK_BLOCK(0),
+    BLINKING_BLOCK(1),
+    STEADY_BLOCK(2),
+    BLINKING_UNDERLINE(3),
+    STEADY_UNDERLINE(4),
+    BLINKING_BAR(5),
+    STEADY_BAR(6);
+
+    private final int index;
+
+    CursorStyles(int index) {
+        this.index = index;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+}
+
 /**
  * Enum for text attributes used in console output.
  */
@@ -411,6 +431,10 @@ class AVandiniEliaBzGuessGame {
      */
     static void moveCursor(int pos, CursorMoveDirection direction) {
         System.out.print("\u001b[" + pos + direction.getLabel());
+    }
+
+    static void setCursorStyle(CursorStyles style) {
+        System.out.print("\u001b[" + style.getIndex() + " q");
     }
 
     /**
@@ -931,13 +955,9 @@ class Game implements Serializable {
             if (input.length() != 4) {
                 throw new InvalidInputException("input must be 4 characters long");
             }
-//            for (char l : input.toUpperCase().toCharArray()) {
-//                for (int i = 0; i < AVandiniEliaBzGuessGame.options.length; i++) {
-//                    if (l != AVandiniEliaBzGuessGame.options[i]) {
-//                        throw new InvalidInputException("input must consist of A, B, C, D, E or F");
-//                    }
-//                }
-//            }
+            if (input.matches(".*[^ABCDEFabcdef].*")) {
+                throw new InvalidInputException("input must consist of A, B, C, D, E or F");
+            }
             System.out.println(parseGuess(input));
             attempts_left--;
             if (attempts_left <= 0) {
