@@ -2,8 +2,11 @@ import java.awt.*;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-import static java.lang.Math.pow;
+import static java.lang.Math.*;
 
 /**
  * Enum representing different categories of commands.
@@ -181,11 +184,13 @@ class GameSerilizer implements Serializable {
     long highscore = 0;
     ArrayList<Game> games = new ArrayList<Game>();
     Game current_game;
+    CursorStyles cursorStyles;
 
-    public GameSerilizer(long highscore, ArrayList<Game> games, Game current_game) {
+    public GameSerilizer(long highscore, ArrayList<Game> games, Game current_game, CursorStyles cursorStyles) {
         this.highscore = highscore;
         this.games = games;
         this.current_game = current_game;
+        this.cursorStyles = cursorStyles;
     }
 
     /**
@@ -223,11 +228,14 @@ class AVandiniEliaBzGuessGame {
     public static final String Author = "Eia Vandini";
     public static final String Version = "v1.34";
     static char[] options = {'A', 'B', 'C', 'D', 'E', 'F'};
+    static CursorStyles cursorStyle = CursorStyles.BLINKING_BAR;
     static long highscore = 0;
-    static Command[] comands = new Command[]{new CommandHelp(), new CommandP(), new CommandSetCode(), new CommandRemains(), new CommandBuy(), new CommandQuit(), new CommandNew(), new CommandHistory(), new CommandRules(), new CommandClose(), new CommandBuyAI(), new CommandAI(), new CommandUnlimitedAttempts()};
+    static Command[] comands = new Command[]{new CommandHelp(), new CommandP(), new CommandSetCode(), new CommandRemains(), new CommandBuy(), new CommandQuit(), new CommandNew(), new CommandHistory(), new CommandRules(), new CommandClose(), new CommandBuyAI(), new CommandAI(), new CommandUnlimitedAttempts(), new CommandChangeCursorStyle()};
+    static KeyBind[] global_keybinds = new KeyBind[]{new KeyBindClose(), new KeyBindNew()};
     static ArrayList<Game> games = new ArrayList<Game>();
     static Game current_game;
-    static GameSerilizer gameSerilizer = new GameSerilizer(highscore, games, current_game);
+    static GameSerilizer gameSerilizer = new GameSerilizer(highscore, games, current_game, cursorStyle);
+    static Thread kyThread = new KeyListenenThread();
 
     /**
      * Main method to start the game.
@@ -235,7 +243,9 @@ class AVandiniEliaBzGuessGame {
      * @param args command-line arguments
      */
     public static void main(String[] args) {
+        AVandiniEliaBzGuessGame.setCursorStyle(cursorStyle);
         greeting();
+        kyThread.start();
         loadGamestate();
         saveGameState();
     }
@@ -287,7 +297,7 @@ class AVandiniEliaBzGuessGame {
      * Displays a greeting message.
      */
     static void greeting() {
-        System.out.println("Programmed by Vandini Elia");
+        System.out.println("\rProgrammed by Vandini Elia");
         new CommandHelp().exec(new String[]{""});
         AVandiniEliaBzGuessGame.eraseLinesUp(2);
     }
@@ -296,7 +306,7 @@ class AVandiniEliaBzGuessGame {
      * Displays the win screen with score.
      */
     static void winScreen() {
-        System.out.println("Congratulations, Score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
+        System.out.println("\rCongratulations, Score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
         askIfPlayAgain();
     }
 
@@ -304,7 +314,7 @@ class AVandiniEliaBzGuessGame {
      * Displays the win screen with score.
      */
     static void aiWinScreen() {
-        System.out.println("Hypothetical score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
+        System.out.println("\rHypothetical score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
         askIfPlayAgain();
     }
 
@@ -312,7 +322,7 @@ class AVandiniEliaBzGuessGame {
      * Displays the lose screen with the secret code.
      */
     static void loosescreen() {
-        System.out.println("You lost! Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
+        System.out.println("\rYou lost! Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
         askIfPlayAgain();
     }
 
@@ -320,7 +330,7 @@ class AVandiniEliaBzGuessGame {
      * Displays the lose screen with the secret code.
      */
     static void aiLooseScreen() {
-        System.out.println("Not even the AI could save you☠\uFE0F. Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
+        System.out.println("\rNot even the AI could save you☠\uFE0F. Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
         askIfPlayAgain();
     }
 
@@ -328,20 +338,62 @@ class AVandiniEliaBzGuessGame {
      * Asks the player if they want to play again.
      */
     static void askIfPlayAgain() {
-        try {
-            System.out.print("Want to try again? (Y/N) ");
-            Scanner sc = new Scanner(System.in);
-            String inp = sc.nextLine();
-            if (inp.equalsIgnoreCase("Y")) {
-                newGame();
-            } else if (inp.equalsIgnoreCase("N")) {
-                System.out.println("See you soon!");
-            } else {
-                throw new InvalidInputException("please answer Y or N");
+
+
+        AtomicBoolean loop = new AtomicBoolean(true);
+        AtomicBoolean cancel = new AtomicBoolean(false);
+        AtomicInteger seleciton = new AtomicInteger();
+
+        KeyListenenThread.keymap.clear();
+        KeyListenenThread.keymap.put(KeyCodes.ENTER.getCode(), n -> loop.set(false));
+        KeyListenenThread.keymap.put(KeyCodes.RIGHT_ARROW.getCode(), n -> seleciton.getAndIncrement());
+        KeyListenenThread.keymap.put(KeyCodes.LEFT_ARROW.getCode(), n -> seleciton.getAndDecrement());
+
+        AVandiniEliaBzGuessGame.hideCursor();
+        System.out.println("\rWant to play again?");
+        System.out.println("\r");
+
+        while (loop.get()) {
+
+            System.out.print("    ");
+            if (seleciton.get() == 0) {
+                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
             }
-        } catch (InvalidInputException e) {
+            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
+            System.out.print('Y');
+            AVandiniEliaBzGuessGame.setAttribute(ResetTextAttributes.RESET_BRIGHT);
+            System.out.print("es");
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            System.out.print("/");
+            if (seleciton.get() == 1) {
+                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+            }
+            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
+            System.out.print('N');
+            AVandiniEliaBzGuessGame.setAttribute(ResetTextAttributes.RESET_BRIGHT);
+            System.out.print("o");
+            AVandiniEliaBzGuessGame.resetAttrributes();
+
+
+            while (!AVandiniEliaBzGuessGame.KeyHandling()) {
+                AVandiniEliaBzGuessGame.wait(10);
+            }
+            if (seleciton.get() < 0) {
+                seleciton.set(1);
+            }
+            if (seleciton.get() > 1) {
+                seleciton.set(0);
+            }
+            System.out.println();
             AVandiniEliaBzGuessGame.eraseLinesUp(1);
-            askIfPlayAgain();
+        }
+        AVandiniEliaBzGuessGame.eraseLinesUp(3);
+        if (seleciton.get() == 0) {
+            newGame();
+        } else {
+            System.out.println("\n\rSee you soon!\r");
+            new CommandClose().exec(new String[]{});
+
         }
     }
 
@@ -433,8 +485,31 @@ class AVandiniEliaBzGuessGame {
         System.out.print("\u001b[" + pos + direction.getLabel());
     }
 
+    static void saveCursorPosition() {
+        System.out.println("\u001b[s");
+    }
+
+    static void restoreCursorPosition() {
+        System.out.println("\u001b[u");
+    }
+
     static void setCursorStyle(CursorStyles style) {
         System.out.print("\u001b[" + style.getIndex() + " q");
+    }
+
+
+    static void fancyprint(String res) {
+        for (char c : res.toCharArray()) {
+            System.out.print(c + "●");
+            AVandiniEliaBzGuessGame.moveCursor(1, CursorMoveDirection.LEFT);
+            AVandiniEliaBzGuessGame.wait(20);
+            if (c == '.') {
+                AVandiniEliaBzGuessGame.wait(500);
+            }
+        }
+        System.out.println(" ");
+        System.out.print("\r");
+        AVandiniEliaBzGuessGame.showCursor();
     }
 
     /**
@@ -449,6 +524,60 @@ class AVandiniEliaBzGuessGame {
             Thread.currentThread().interrupt();
         }
     }
+
+    static boolean KeyHandling() {
+        boolean processed_key = false;
+        for (byte[] pressed_key : new ArrayList<>(KeyListenenThread.active_keys)) {
+            for (byte[] key : KeyListenenThread.keymap.keySet()) {
+                if (Arrays.equals(pressed_key, key)) {
+                    KeyListenenThread.active_keys.remove(pressed_key);
+                    Consumer<byte[]> function = KeyListenenThread.keymap.get(key);
+                    function.accept(key);
+                    processed_key = true;
+                    break;
+                }
+            }
+        }
+        KeyListenenThread.active_keys.clear();
+        return processed_key;
+    }
+}
+
+class KeyBind {
+    String shortel;
+    String description;
+    byte[][] keys;
+
+    void exec(byte[] pressedKey) {
+    }
+}
+
+class KeyBindClose extends KeyBind {
+
+    KeyBindClose() {
+        shortel = "^Q";
+        description = "Saves and close the game";
+        keys = new byte[][]{KeyCodes.Q.getCtrlCode()};
+    }
+
+    @Override
+    void exec(byte[] pressedKey) {
+        new CommandClose().exec(new String[]{});
+    }
+}
+
+class KeyBindNew extends KeyBind {
+
+    KeyBindNew() {
+        shortel = "^N";
+        description = "Starts a new game";
+        keys = new byte[][]{KeyCodes.N.getCtrlCode()};
+    }
+
+    @Override
+    void exec(byte[] pressedKey) {
+        new CommandNew().exec(new String[]{});
+    }
 }
 
 /**
@@ -462,9 +591,6 @@ class Command {
     String description;
 
     void exec(String[] args) throws InvalidInputException {
-    }
-
-    Command() {
     }
 }
 
@@ -493,18 +619,18 @@ class CommandHelp extends Command {
             if (c == CommandCategory.SECRET && !show_secret) {
                 continue;
             }
-            System.out.println("\n" + c.toString().toUpperCase());
+            System.out.println("\n\r" + c.toString().toUpperCase());
             for (Command command : AVandiniEliaBzGuessGame.comands) {
                 if (c != command.category) {
                     continue;
                 }
-                String help_string = command.shortc + " | " + command.longc;
+                String help_string = "\r." + command.shortc + " | ." + command.longc;
                 help_string = help_string + space_storage.substring(help_string.length()) + command.description;
                 System.out.println(help_string);
             }
         }
         System.out.println();
-        System.out.println("Software by " + AVandiniEliaBzGuessGame.Author + ". Version " + AVandiniEliaBzGuessGame.Version);
+        System.out.println("\rSoftware by " + AVandiniEliaBzGuessGame.Author + ". Version " + AVandiniEliaBzGuessGame.Version);
     }
 }
 
@@ -523,24 +649,24 @@ class CommandRules extends Command {
     }
 
     void exec(String[] args) {
-        System.out.println("╔═══════════════════════════════════════════════════════════════════════════╗");
-        System.out.println("║                             BzGuessGame Help                              ║");
-        System.out.println("║                                                                           ║");
-        System.out.println("║ Welcome to my BzGuessGame! Your goal is to guess the secret code.         ║");
-        System.out.println("║                                                                           ║");
-        System.out.println("║ - The secret code consists of 4 characters from {a, b, c, d, e, f}.       ║");
-        System.out.println("║ - Characters can appear zero to four times.                               ║");
-        System.out.println("║ - You have 20 attempts to guess the code.                                 ║");
-        System.out.println("║ - After each guess, you'll receive feedback:                              ║");
-        System.out.println("║   X: Correct character at the correct position.                           ║");
-        System.out.println("║   -: Correct character but at the wrong position.                         ║");
-        System.out.println("║                                                                           ║");
-        System.out.println("║ Check out available commands with .help or .h!                            ║");
-        System.out.println("║ To execute a command prefix a '.' before the command.                     ║");
-        System.out.println("║ 'HELP' will be interpreted as a guess while '.help' or '.h' is a command. ║");
-        System.out.println("║                                                                           ║ ");
-        System.out.println("║ Good luck!                                                                ║");
-        System.out.println("╚═══════════════════════════════════════════════════════════════════════════╝ ");
+        System.out.println("\r╔═══════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("\r║                             BzGuessGame Help                              ║");
+        System.out.println("\r║                                                                           ║");
+        System.out.println("\r║ Welcome to my BzGuessGame! Your goal is to guess the secret code.         ║");
+        System.out.println("\r║                                                                           ║");
+        System.out.println("\r║ - The secret code consists of 4 characters from {a, b, c, d, e, f}.       ║");
+        System.out.println("\r║ - Characters can appear zero to four times.                               ║");
+        System.out.println("\r║ - You have 20 attempts to guess the code.                                 ║");
+        System.out.println("\r║ - After each guess, you'll receive feedback:                              ║");
+        System.out.println("\r║   X: Correct character at the correct position.                           ║");
+        System.out.println("\r║   -: Correct character but at the wrong position.                         ║");
+        System.out.println("\r║                                                                           ║");
+        System.out.println("\r║ Check out available commands with .help or .h!                            ║");
+        System.out.println("\r║ To execute a command prefix a '.' before the command.                     ║");
+        System.out.println("\r║ 'HELP' will be interpreted as a guess while '.help' or '.h' is a command. ║");
+        System.out.println("\r║                                                                           ║ ");
+        System.out.println("\r║ Good luck!                                                                ║");
+        System.out.println("\r╚═══════════════════════════════════════════════════════════════════════════╝ ");
     }
 }
 
@@ -559,7 +685,7 @@ class CommandP extends Command {
     }
 
     void exec(String[] args) {
-        System.out.println(AVandiniEliaBzGuessGame.current_game.code);
+        System.out.println("\r" + AVandiniEliaBzGuessGame.current_game.code);
     }
 }
 
@@ -578,7 +704,6 @@ class CommandQuit extends Command {
     }
 
     void exec(String[] args) {
-        System.out.println(AVandiniEliaBzGuessGame.current_game.code);
         AVandiniEliaBzGuessGame.current_game.lost = true;
     }
 }
@@ -598,7 +723,14 @@ class CommandClose extends Command {
     }
 
     void exec(String[] args) {
+        KeyListenenThread.running = false;
+        try {
+            KeyListenenThread.disableRawMode();
+        } catch (Exception ignored) {
+        }
         AVandiniEliaBzGuessGame.saveGameState();
+        System.out.println("\r");
+        AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_BLOCK);
         System.exit(0); // not ideal but cleaner than manually exiting the game loop from here
     }
 }
@@ -689,7 +821,7 @@ class CommandBuy extends Command {
 
         AVandiniEliaBzGuessGame.current_game.attempts_left -= 5;
         AVandiniEliaBzGuessGame.current_game.history += AVandiniEliaBzGuessGame.current_game.attempts_left + "> The User bought " + Arrays.toString(res_string) + " using up 5 attempts\n";
-        System.out.println(res_string);
+        System.out.println("\r" + res_string);
     }
 }
 
@@ -707,42 +839,237 @@ class CommandHistory extends Command {
         fullName = "History";
     }
 
-    void exec(String[] args) {
-        System.out.println("Select a game history to view");
-        for (int i = 0; i < AVandiniEliaBzGuessGame.games.size(); i++) {
-            StringBuilder sb = new StringBuilder();
-            Game g = AVandiniEliaBzGuessGame.games.get(i);
-            sb.append(AVandiniEliaBzGuessGame.games.size() - 1 - i).append(") ");
-            if (AVandiniEliaBzGuessGame.current_game == g) {
-                sb.append(" @ ");
-            } else if (g.lost) {
-                sb.append(" L ");
-            } else if (g.won) {
-                sb.append(" W ");
-            } else {
-                sb.append("   ");
-            }
-            if (g.lost || g.won) {
-                sb.append(g.code).append(" | ");
-            } else {
-                sb.append("____ | ");
-            }
-            sb.append(g.attempts_left).append(" | ");
-            sb.append(g.score);
-            sb.append(g.attempts_left).append(" | ");
-            sb.append(g.start_date);
-            System.out.println(sb);
+    void exec(String[] args) throws InvalidInputException {
+
+        if (AVandiniEliaBzGuessGame.games.isEmpty()) {
+            throw new InvalidInputException("start a game before trying to access the game history");
         }
-        System.out.println();
-        AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
-        System.out.print("> ");
-        AVandiniEliaBzGuessGame.resetAttrributes();
-        Scanner sc = new Scanner(System.in);
+
+        AtomicBoolean loop = new AtomicBoolean(true);
+        AtomicBoolean cancel = new AtomicBoolean(false);
+        AtomicInteger seleciton = new AtomicInteger();
+
+        KeyListenenThread.keymap.clear();
+        KeyListenenThread.keymap.put(KeyCodes.ENTER.getCode(), n -> loop.set(false));
+        KeyListenenThread.keymap.put(KeyCodes.DOWN_ARROW.getCode(), n -> seleciton.getAndIncrement());
+        KeyListenenThread.keymap.put(KeyCodes.UP_ARROW.getCode(), n -> seleciton.getAndDecrement());
+        KeyListenenThread.keymap.put(KeyCodes.C.getCode(), n -> cancel.set(true));
+        KeyListenenThread.keymap.put(KeyCodes.Q.getCode(), n -> cancel.set(true));
+        KeyListenenThread.keymap.put(KeyCodes.ESCAPE.getCode(), n -> cancel.set(true));
+
+        AVandiniEliaBzGuessGame.hideCursor();
+        System.out.println("\rSelect a game history to view");
+        System.out.println("\rUse Arrow keys to navigate selection, enter to view a game and C or esc to cancel");
+        System.out.println("\r");
+
+        while (loop.get() && !cancel.get()) {
+
+            for (int i = 0; i < AVandiniEliaBzGuessGame.games.size(); i++) {
+                StringBuilder sb = new StringBuilder("\r");
+                Game g = AVandiniEliaBzGuessGame.games.get(i);
+//                sb.append(AVandiniEliaBzGuessGame.games.size() - 1 - i).append(") ");
+                if (AVandiniEliaBzGuessGame.current_game == g) {
+                    sb.append(" @ ");
+                } else if (g.lost) {
+                    sb.append(" L ");
+                } else if (g.won) {
+                    sb.append(" W ");
+                } else {
+                    sb.append("   ");
+                }
+                if (g.lost || g.won) {
+                    sb.append(g.code).append(" | ");
+                } else {
+                    sb.append("____ | ");
+                }
+                sb.append(g.attempts_left).append(" | ");
+                sb.append(g.score).append(" | ");
+                sb.append(g.start_date);
+                if (i == seleciton.get()) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.println(sb);
+                if (i == seleciton.get()) {
+                    AVandiniEliaBzGuessGame.resetAttrributes();
+                }
+            }
+            while (!AVandiniEliaBzGuessGame.KeyHandling()) {
+                AVandiniEliaBzGuessGame.wait(10);
+            }
+            if (seleciton.get() < 0) {
+                seleciton.set(AVandiniEliaBzGuessGame.games.size() - 1);
+            }
+            if (seleciton.get() >= AVandiniEliaBzGuessGame.games.size()) {
+                seleciton.set(0);
+            }
+
+            AVandiniEliaBzGuessGame.eraseLinesUp(AVandiniEliaBzGuessGame.games.size());
+        }
+        AVandiniEliaBzGuessGame.eraseLinesUp(3);
+
+        if (cancel.get()) {
+            AVandiniEliaBzGuessGame.showCursor();
+            return;
+        }
+
+        AtomicBoolean quit = new AtomicBoolean(false);
+
+        KeyListenenThread.keymap.clear();
+        KeyListenenThread.keymap.put(KeyCodes.Q.getCode(), n -> quit.set(true));
+        KeyListenenThread.keymap.put(KeyCodes.C.getCode(), n -> quit.set(true));
+
+        System.out.println("Press Q to close this game\n");
+        System.out.println("\r" + AVandiniEliaBzGuessGame.games.get(seleciton.get()).history.replace("\n", "\n\r"));
+
+        AVandiniEliaBzGuessGame.hideCursor();
+        while (!quit.get()) {
+            while (!AVandiniEliaBzGuessGame.KeyHandling()) {
+                AVandiniEliaBzGuessGame.wait(10);
+            }
+        }
+
+        AVandiniEliaBzGuessGame.eraseLinesUp(AVandiniEliaBzGuessGame.games.get(seleciton.get()).history.split("\n").length + 3);
+
+        exec(args);
+    }
+}
+
+
+/**
+ * Command to display the history of guesses.
+ */
+class CommandChangeCursorStyle extends Command {
+
+    CommandChangeCursorStyle() {
+        super();
+        category = CommandCategory.INGAME;
+        longc = "cursor";
+        shortc = "C";
+        description = "Change cursor style (may not work on some devices)";
+        fullName = "Change cursor style";
+    }
+
+    void exec(String[] args) throws InvalidInputException {
+        AtomicInteger seleciton = new AtomicInteger(AVandiniEliaBzGuessGame.cursorStyle.getIndex());
+
         try {
-            int selcted = sc.nextInt();
-            System.out.println(AVandiniEliaBzGuessGame.games.reversed().get(selcted).history);
-        } catch (InputMismatchException e) {
-            System.out.println("Invalid Input");
+            seleciton.set(Integer.parseInt(args[0]));
+        } catch (Exception e) {
+
+            AtomicBoolean loop = new AtomicBoolean(true);
+            AtomicBoolean cancel = new AtomicBoolean(false);
+
+            KeyListenenThread.keymap.clear();
+            KeyListenenThread.keymap.put(KeyCodes.ENTER.getCode(), n -> loop.set(false));
+            KeyListenenThread.keymap.put(KeyCodes.DOWN_ARROW.getCode(), n -> seleciton.getAndIncrement());
+            KeyListenenThread.keymap.put(KeyCodes.UP_ARROW.getCode(), n -> seleciton.getAndDecrement());
+            KeyListenenThread.keymap.put(KeyCodes.C.getCode(), n -> cancel.set(true));
+            KeyListenenThread.keymap.put(KeyCodes.Q.getCode(), n -> cancel.set(true));
+            KeyListenenThread.keymap.put(KeyCodes.ESCAPE.getCode(), n -> cancel.set(true));
+
+            AVandiniEliaBzGuessGame.hideCursor();
+            System.out.println("\rSelect a cursor style to apply");
+            System.out.println("\rUse Arrow keys to navigate selection, enter to confirm and C or esc to cancel");
+            System.out.println("\r");
+
+            while (loop.get() && !cancel.get()) {
+
+
+                if (seleciton.get() == 0) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rBlink Block ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                if (seleciton.get() == 1) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rBlinking Block ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                if (seleciton.get() == 2) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rSteady Block ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                if (seleciton.get() == 3) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rBlinking Underline ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                if (seleciton.get() == 4) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rSteady Underline ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                if (seleciton.get() == 5) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rBlinking Bar ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                if (seleciton.get() == 6) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                }
+                System.out.print("\rSteady Bar ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                System.out.println();
+
+
+                long start = System.currentTimeMillis();
+                while (!AVandiniEliaBzGuessGame.KeyHandling() && System.currentTimeMillis() < start + 500) {
+                    AVandiniEliaBzGuessGame.wait(10);
+                }
+                if (seleciton.get() < 0) {
+                    seleciton.set(6);
+                }
+                if (seleciton.get() > 6) {
+                    seleciton.set(0);
+                }
+
+                AVandiniEliaBzGuessGame.eraseLinesUp(7);
+            }
+            AVandiniEliaBzGuessGame.eraseLinesUp(3);
+        }
+
+        switch (seleciton.get()) {
+            case (0):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINK_BLOCK);
+                break;
+            case (1):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_BLOCK);
+                break;
+            case (2):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.STEADY_BLOCK);
+                break;
+            case (3):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_UNDERLINE);
+                break;
+            case (4):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.STEADY_UNDERLINE);
+                break;
+            case (5):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_BAR);
+                break;
+            case (6):
+                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.STEADY_BAR);
+                break;
+
         }
     }
 }
@@ -765,7 +1092,7 @@ class CommandAI extends Command {
             g.history += "Player activated AI.\n";
             while (!g.won && !g.lost) {
                 AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.RED, TextAttributes.BRIGHT});
-                System.out.print(g.attempts_left + ">");
+                System.out.print("\r" + g.attempts_left + ">");
                 AVandiniEliaBzGuessGame.resetAttrributes();
                 char[] nextGuess = g.solver.minimaxBestGuess(g.matches, g.guesses);
                 for (char c : nextGuess) {
@@ -773,9 +1100,8 @@ class CommandAI extends Command {
                     System.out.print(c);
                 }
                 TimeUnit.MILLISECONDS.sleep(250);
-                System.out.println();
                 String res = g.parseGuess(new String(nextGuess));
-                System.out.println(res);
+                System.out.println(" " + res);
                 g.attempts_left--;
                 if (g.attempts_left <= 0) {
                     g.lost = true;
@@ -806,7 +1132,30 @@ class CommandBuyAI extends Command {
         g.attempts_left -= 5;
         char[] nextGuess = g.solver.minimaxBestGuess(g.matches, g.guesses);
         g.history += "User generated a optimal guess: " + new String(nextGuess) + ", using up 5 attempts\n";
-        System.out.println("Sure, here is a optimal 4-letter guess: [" + new String(nextGuess) + "] . let me know if you have anymore questions!");
+        String res = "\r" + "Sure, here is a optimal 4-letter guess: [" + new String(nextGuess) + "] .Let me know if you have anymore questions!";
+
+        AVandiniEliaBzGuessGame.hideCursor();
+        AVandiniEliaBzGuessGame.eraseLine();
+        System.out.print(".");
+        AVandiniEliaBzGuessGame.wait(250);
+        AVandiniEliaBzGuessGame.eraseLine();
+        System.out.print("..");
+        AVandiniEliaBzGuessGame.wait(250);
+        AVandiniEliaBzGuessGame.eraseLine();
+        System.out.print("...");
+        AVandiniEliaBzGuessGame.wait(1000);
+        AVandiniEliaBzGuessGame.eraseLine();
+        AVandiniEliaBzGuessGame.wait(250);
+        System.out.print(".");
+        AVandiniEliaBzGuessGame.wait(250);
+        AVandiniEliaBzGuessGame.eraseLine();
+        System.out.print("..");
+        AVandiniEliaBzGuessGame.wait(250);
+        AVandiniEliaBzGuessGame.eraseLine();
+        System.out.print("...");
+        AVandiniEliaBzGuessGame.wait(1000);
+        AVandiniEliaBzGuessGame.eraseLine();
+        AVandiniEliaBzGuessGame.fancyprint(res);
     }
 }
 
@@ -827,7 +1176,8 @@ class CommandRemains extends Command {
         g.attempts_left--;
         g.attempts_left--;
         g.history += "Game counted " + solution_count + " possible solutions still available based on guess feedback. 2 attempts where used up\n";
-        System.out.println("Based on past guesses feedback there are " + solution_count + " viable solutions.");
+        String res = "\r" + "Based on past guesses feedback there are " + solution_count + " viable solutions.";
+        AVandiniEliaBzGuessGame.fancyprint(res);
     }
 }
 
@@ -863,6 +1213,8 @@ class Game implements Serializable {
     ArrayList<Point> matches = new ArrayList<Point>();
     ArrayList<char[]> guesses = new ArrayList<char[]>();
     boolean ai = false;
+
+    static TextBox textBox = new TextBox();
 
     public Game() {
         Random r = new Random();
@@ -940,9 +1292,12 @@ class Game implements Serializable {
      * Parses user input.
      */
     void parseInput() {
+        String input = "";
         try {
-            String input;
-            input = askInput();
+            input = textBox.get_input(this);
+            if (lost || won || ai || AVandiniEliaBzGuessGame.current_game != this) {
+                return;
+            }
             if (input.isEmpty()) {
                 throw new InvalidInputException("please input a command or 4 character sequence");
             }
@@ -958,20 +1313,53 @@ class Game implements Serializable {
             if (input.matches(".*[^ABCDEFabcdef].*")) {
                 throw new InvalidInputException("input must consist of A, B, C, D, E or F");
             }
-            System.out.println(parseGuess(input));
+//            AVandiniEliaBzGuessGame.eraseLine();
+            AVandiniEliaBzGuessGame.eraseLinesUp(1);
+
+            AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
+            System.out.print("\r" + attempts_left + "> ");
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            System.out.println(input + " " + parseGuess(input));
             attempts_left--;
             if (attempts_left <= 0) {
                 lost = true;
             }
         } catch (InvalidInputException e) {
             AVandiniEliaBzGuessGame.eraseLinesUp(1);
-            AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
-            System.out.print(attempts_left + "> ");
-            AVandiniEliaBzGuessGame.resetAttrributes();
-            AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
             AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
-            System.out.println(e.getMessage());
+            AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
+            System.out.print(e.getMessage());
             AVandiniEliaBzGuessGame.setAttribute(TextAttributes.RESET);
+
+            long start = System.currentTimeMillis();
+            long last_tick = System.currentTimeMillis();
+
+            AVandiniEliaBzGuessGame.hideCursor();
+
+            while (System.currentTimeMillis() < start + 3000) {
+                if (System.currentTimeMillis() < last_tick + 1) {
+                    continue;
+                }
+                last_tick = System.currentTimeMillis();
+                if (!KeyListenenThread.active_keys.isEmpty()) {
+                    break;
+                }
+                AVandiniEliaBzGuessGame.eraseLine();
+
+                AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
+                System.out.print(attempts_left + "> ");
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.UNDERLINE);
+                System.out.print(input);
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                if (System.currentTimeMillis() % 1000 < 500) {
+                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
+                }
+                AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
+                System.out.print(" " + e.getMessage());
+                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.RESET);
+            }
+            AVandiniEliaBzGuessGame.showCursor();
             parseInput();
         }
     }
@@ -985,8 +1373,8 @@ class Game implements Serializable {
     String parseGuess(String input) {
         Point p = checkGuess(code, input.toCharArray());
         StringBuilder result = new StringBuilder();
-        result.append("X".repeat(Math.max(0, p.x)));
-        result.append("-".repeat(Math.max(0, p.y)));
+        result.append("X".repeat(max(0, p.x)));
+        result.append("-".repeat(max(0, p.y)));
         matches.add(p);
         guesses.add(input.toCharArray());
         if (p.x >= 4) {
@@ -1039,7 +1427,7 @@ class Game implements Serializable {
      */
     void finishGame() {
         if (won) {
-            long diff = Math.abs(new Date().getTime() - this.start_date.getTime());
+            long diff = abs(new Date().getTime() - this.start_date.getTime());
             score = score_calc(diff, (int) attempts_left);
             if (score > AVandiniEliaBzGuessGame.highscore && !AVandiniEliaBzGuessGame.current_game.ai) {
                 AVandiniEliaBzGuessGame.highscore = score;
@@ -1151,5 +1539,655 @@ class Solver implements Serializable {
             }
         }
         return lowest_worst_score_code;
+    }
+}
+
+enum KeyCodes {
+    BACKSPACE(new byte[]{127}, new byte[]{127}, new byte[]{8}, new byte[]{27, 127}, new byte[]{27, 127}),
+    TAB(new byte[]{9}, new byte[]{27, 91}, new byte[]{9}, new byte[]{9}, new byte[]{9}),
+    ENTER(new byte[]{13}, new byte[]{13}, new byte[]{13}, new byte[]{27, 13}, new byte[]{27, 13}),
+    ESCAPE(new byte[]{27}, new byte[]{27}, new byte[]{27}, new byte[]{27}, new byte[]{27}),
+    PAGE_UP(new byte[]{27, 91, 53, 126}, new byte[]{27, 91, 53, 126}, new byte[]{27, 91, 53, 59, 51, 126}, new byte[]{27, 91, 53, 59, 53, 126}, new byte[]{27, 91, 53, 59, 53, 126}),
+    PAGE_DOWN(new byte[]{27, 91, 54, 126}, new byte[]{27, 91, 54, 126}, new byte[]{27, 91, 54, 59, 53, 126}, new byte[]{27, 91, 54, 59, 51, 126}, new byte[]{27, 91, 54, 59, 51, 126}),
+    HOME(new byte[]{27, 91, 72}, new byte[]{27, 91, 72}, new byte[]{27, 91, 49, 59, 53, 72}, new byte[]{27, 91, 49, 59, 51, 72}, new byte[]{27, 91, 49, 59, 51, 72}),
+    END(new byte[]{27, 91, 70}, new byte[]{27, 91, 70}, new byte[]{27, 91, 49, 59, 53, 70}, new byte[]{27, 91, 49, 59, 51, 70}, new byte[]{27, 91, 49, 59, 51, 70}),
+    UP_ARROW(new byte[]{27, 91, 65}, new byte[]{27, 91, 49, 59, 50, 65}, new byte[]{27, 91, 49, 59, 53, 65}, new byte[]{27, 91, 49, 59, 51, 65}, new byte[]{27, 91, 49, 59, 52, 65}),
+    DOWN_ARROW(new byte[]{27, 91, 66}, new byte[]{27, 91, 49, 59, 50, 66}, new byte[]{27, 91, 49, 59, 53, 66}, new byte[]{27, 91, 49, 59, 51, 66}, new byte[]{27, 91, 49, 59, 52, 66}),
+    RIGHT_ARROW(new byte[]{27, 91, 67}, new byte[]{27, 91, 49, 59, 50, 67}, new byte[]{27, 91, 49, 59, 53, 67}, new byte[]{27, 91, 49, 59, 51, 67}, new byte[]{27, 91, 49, 59, 52, 67}),
+    LEFT_ARROW(new byte[]{27, 91, 68}, new byte[]{27, 91, 49, 59, 50, 68}, new byte[]{27, 91, 49, 59, 53, 68}, new byte[]{27, 91, 49, 59, 51, 68}, new byte[]{27, 91, 49, 59, 52, 68}),
+    DELETE(new byte[]{27, 91, 51, 126}, new byte[]{27, 91, 51, 59, 50, 126}, new byte[]{27, 91, 51, 59, 53, 126}, new byte[]{27, 91, 51, 59, 52, 126}, new byte[]{27, 91, 51, 59, 51, 126}),
+    A(new byte[]{97}, new byte[]{65}, new byte[]{1}, new byte[]{27, 97}, new byte[]{27, 65}),
+    B(new byte[]{98}, new byte[]{66}, new byte[]{2}, new byte[]{27, 98}, new byte[]{27, 65}),
+    C(new byte[]{99}, new byte[]{67}, new byte[]{3}, new byte[]{27, 99}, new byte[]{27, 66}),
+    D(new byte[]{100}, new byte[]{68}, new byte[]{4}, new byte[]{27, 100}, new byte[]{27, 67}),
+    E(new byte[]{101}, new byte[]{69}, new byte[]{5}, new byte[]{27, 101}, new byte[]{27, 68}),
+    F(new byte[]{102}, new byte[]{70}, new byte[]{6}, new byte[]{27, 102}, new byte[]{27, 69}),
+    G(new byte[]{103}, new byte[]{71}, new byte[]{7}, new byte[]{27, 103}, new byte[]{27, 70}),
+    H(new byte[]{104}, new byte[]{72}, new byte[]{8}, new byte[]{27, 104}, new byte[]{27, 71}),
+    I(new byte[]{105}, new byte[]{73}, new byte[]{9}, new byte[]{27, 105}, new byte[]{27, 72}),
+    J(new byte[]{106}, new byte[]{74}, new byte[]{10}, new byte[]{27, 106}, new byte[]{27, 73}),
+    K(new byte[]{107}, new byte[]{75}, new byte[]{11}, new byte[]{27, 107}, new byte[]{27, 74}),
+    L(new byte[]{108}, new byte[]{76}, new byte[]{12}, new byte[]{27, 108}, new byte[]{27, 75}),
+    M(new byte[]{109}, new byte[]{77}, new byte[]{13}, new byte[]{27, 109}, new byte[]{27, 76}),
+    N(new byte[]{110}, new byte[]{78}, new byte[]{14}, new byte[]{27, 110}, new byte[]{27, 77}),
+    O(new byte[]{111}, new byte[]{79}, new byte[]{15}, new byte[]{27, 111}, new byte[]{27, 78}),
+    P(new byte[]{112}, new byte[]{80}, new byte[]{16}, new byte[]{27, 112}, new byte[]{27, 79}),
+    Q(new byte[]{113}, new byte[]{81}, new byte[]{17}, new byte[]{27, 113}, new byte[]{27, 80}),
+    R(new byte[]{114}, new byte[]{82}, new byte[]{18}, new byte[]{27, 114}, new byte[]{27, 81}),
+    S(new byte[]{115}, new byte[]{83}, new byte[]{19}, new byte[]{27, 115}, new byte[]{27, 82}),
+    T(new byte[]{116}, new byte[]{84}, new byte[]{20}, new byte[]{27, 116}, new byte[]{27, 83}),
+    U(new byte[]{117}, new byte[]{85}, new byte[]{21}, new byte[]{27, 117}, new byte[]{27, 84}),
+    V(new byte[]{118}, new byte[]{86}, new byte[]{22}, new byte[]{27, 118}, new byte[]{27, 85}),
+    W(new byte[]{119}, new byte[]{87}, new byte[]{23}, new byte[]{27, 119}, new byte[]{27, 86}),
+    X(new byte[]{120}, new byte[]{88}, new byte[]{24}, new byte[]{27, 120}, new byte[]{27, 87}),
+    Y(new byte[]{121}, new byte[]{89}, new byte[]{25}, new byte[]{27, 121}, new byte[]{27, 88}),
+    Z(new byte[]{122}, new byte[]{90}, new byte[]{26}, new byte[]{27, 122}, new byte[]{27, 89}),
+    NUM_1(new byte[]{49}, new byte[]{49}, new byte[]{49}, new byte[]{49}, new byte[]{49}),
+    NUM_2(new byte[]{50}, new byte[]{50}, new byte[]{50}, new byte[]{50}, new byte[]{50}),
+    NUM_3(new byte[]{51}, new byte[]{51}, new byte[]{51}, new byte[]{51}, new byte[]{51}),
+    NUM_4(new byte[]{52}, new byte[]{52}, new byte[]{52}, new byte[]{52}, new byte[]{52}),
+    NUM_5(new byte[]{53}, new byte[]{53}, new byte[]{53}, new byte[]{53}, new byte[]{53}),
+    NUM_6(new byte[]{54}, new byte[]{54}, new byte[]{54}, new byte[]{54}, new byte[]{54}),
+    NUM_7(new byte[]{55}, new byte[]{55}, new byte[]{55}, new byte[]{55}, new byte[]{55}),
+    NUM_8(new byte[]{56}, new byte[]{56}, new byte[]{56}, new byte[]{56}, new byte[]{56}),
+    NUM_9(new byte[]{57}, new byte[]{57}, new byte[]{57}, new byte[]{57}, new byte[]{57}),
+    NUM_0(new byte[]{48}, new byte[]{48}, new byte[]{48}, new byte[]{48}, new byte[]{48}),
+    //    MULTIPLY(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    ADD(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    SUBTRACT(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    DECIMAL_POINT(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    DIVIDE(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+    F1(new byte[]{27, 79, 80}, new byte[]{27, 79, 80}, new byte[]{27, 91, 49, 59, 53, 80}, new byte[]{27, 79, 80}, new byte[]{27, 79, 80}),
+    F2(new byte[]{27, 79, 81}, new byte[]{27, 79, 81}, new byte[]{27, 91, 49, 59, 53, 81}, new byte[]{27, 79, 81}, new byte[]{27, 79, 81}),
+    F3(new byte[]{27, 79, 82}, new byte[]{27, 79, 82}, new byte[]{27, 91, 49, 59, 53, 82}, new byte[]{27, 79, 82}, new byte[]{27, 79, 82}),
+    F4(new byte[]{27, 79, 83}, new byte[]{27, 79, 83}, new byte[]{27, 91, 49, 59, 53, 83}, new byte[]{27, 79, 83}, new byte[]{27, 79, 83}),
+    F5(new byte[]{27, 91, 49, 53, 126}, new byte[]{27, 91, 49, 53, 126}, new byte[]{27, 91, 49, 53, 59, 53, 126}, new byte[]{27, 91, 49, 53, 126}, new byte[]{27, 91, 49, 53, 126}),
+    F6(new byte[]{27, 91, 49, 55, 126}, new byte[]{27, 91, 49, 55, 126}, new byte[]{27, 91, 49, 55, 59, 53, 126}, new byte[]{27, 91, 49, 55, 126}, new byte[]{27, 91, 49, 55, 126}),
+    F7(new byte[]{27, 91, 49, 56, 126}, new byte[]{27, 91, 49, 56, 126}, new byte[]{27, 91, 49, 56, 59, 53, 126}, new byte[]{27, 91, 49, 56, 126}, new byte[]{27, 91, 49, 56, 126}),
+    F8(new byte[]{27, 91, 49, 57, 126}, new byte[]{27, 91, 49, 57, 126}, new byte[]{27, 91, 49, 57, 126}, new byte[]{27, 91, 49, 57, 126}, new byte[]{27, 91, 49, 57, 126}),
+    F9(new byte[]{27, 91, 50, 48, 126}, new byte[]{27, 91, 50, 48, 126}, new byte[]{27, 91, 50, 48, 126}, new byte[]{27, 91, 50, 48, 126}, new byte[]{27, 91, 50, 48, 126}),
+    F10(new byte[]{27, 91, 50, 49, 126}, new byte[]{27, 91, 50, 49, 126}, new byte[]{27, 91, 50, 49, 126}, new byte[]{27, 91, 50, 49, 126}, new byte[]{27, 91, 50, 49, 126}),
+    F11(new byte[]{27, 91, 50, 51, 126}, new byte[]{27, 91, 50, 51, 126}, new byte[]{27, 91, 50, 51, 126}, new byte[]{27, 91, 50, 51, 126}, new byte[]{27, 91, 50, 51, 126}),
+    F12(new byte[]{27, 91, 50, 52, 126}, new byte[]{27, 91, 50, 52, 126}, new byte[]{27, 91, 50, 52, 126}, new byte[]{27, 91, 50, 52, 126}, new byte[]{27, 91, 50, 52, 126}),
+    PERIOD(new byte[]{46}, new byte[]{46}, new byte[]{46}, new byte[]{27, 46}, new byte[]{27, 46}),
+    SPACE(new byte[]{32}, new byte[]{32}, new byte[]{32}, new byte[]{27, 32}, new byte[]{27, 32}),
+
+    ;
+//    SEMICOLON(new byte[]{59}, new byte[]{59}, new byte[]{59}, new byte[]{59}, new byte[]{59}),
+//    EQUAL_SIGN(new byte[]{61}, new byte[]{61}, new byte[]{61}, new byte[]{61}, new byte[]{61}),
+//    COMMA(new byte[]{44}, new byte[]{44}, new byte[]{44}, new byte[]{44}, new byte[]{44}),
+//    DASH(new byte[]{47}, new byte[]{47}, new byte[]{47}, new byte[]{47}, new byte[]{47}),
+//    FORWARD_SLASH(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    GRAVE_ACCENT(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    OPEN_BRACKET(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    BACK_SLASH(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    CLOSE_BRACKET(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+//    SINGLE_QUOTE(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{});
+
+    private final byte[] code;
+    private final byte[] shiftCode;
+    private final byte[] ctrlCode;
+    private final byte[] altCode;
+    private final byte[] altShiftCode;
+
+    KeyCodes(byte[] code, byte[] shiftCode, byte[] ctrlCode, byte[] altCode, byte[] altShiftCode) {
+        this.code = code;
+        this.shiftCode = shiftCode;
+        this.ctrlCode = ctrlCode;
+        this.altCode = altCode;
+        this.altShiftCode = altShiftCode;
+    }
+
+    public byte[] getCode() {
+        return code;
+    }
+
+    public byte[] getShiftCode() {
+        return shiftCode;
+    }
+
+    public byte[] getCtrlCode() {
+        return ctrlCode;
+    }
+
+    public byte[] getAltCode() {
+        return altCode;
+    }
+
+    public byte[] getAltShiftCode() {
+        return altShiftCode;
+    }
+}
+
+enum KeyModifier {
+    NONE,
+    SHIFT,
+    CTRL,
+    ALT,
+    ALT_SHIFT;
+}
+
+class KeyListenenThread extends Thread {
+
+    static boolean running = false;
+    static boolean globalKeyHandling = true;
+
+    static Queue<byte[]> active_keys = new LinkedList<>();
+    static Map<byte[], Consumer<byte[]>> keymap = new Hashtable<>();
+
+    public void run() {
+
+        try {
+            if (running) {
+                throw new RuntimeException("keythread already running");
+            }
+            running = true;
+            enableRawMode();
+            while (running) {
+                byte[] b = new byte[8];
+                int l = System.in.read(b);
+//                System.out.println("\r" + Arrays.toString(b));
+                byte[] buffer = new byte[l];
+
+                System.arraycopy(b, 0, buffer, 0, l);
+                active_keys.add(buffer);
+                if (globalKeyHandling) {
+                    GlobalKeyHandling();
+                }
+//                System.out.println("\r" + Arrays.toString(buffer));
+
+
+//                Preserving old code is not about dwelling on the past,
+//                but about arming the future with the wisdom
+//                to avoid repeating its messiest spaghetticode.
+//                ~"ChatGPT" _probably_ 2025*
+//
+//                int key = System.in.read();
+//                System.in.read();
+//                key_buffer.add(key);
+////                if (last_key == 27) {
+////                    continue;
+////                }
+//                long current_time = System.currentTimeMillis();
+//                if (current_time - last_key_time > 5) {
+//                    StringBuilder res = new StringBuilder("\rPressed: ");
+//                    for (int k : key_buffer) {
+//                        if (printable((char) k)) {
+//                            res.append((char) k).append(", ");
+//                        } else {
+//                            res.append(k).append(", ");
+//                        }
+//                    }
+//                    System.out.println(res.toString());
+//                    key_buffer.clear();
+//                    last_key_time = current_time;
+//                }
+//                last_key = key;
+
+
+//                modifier = ModifierKeycodes.NONE;
+//                int key = System.in.read(); // Read a single character
+//                if (key == '\033' && System.in.read() == '[') {
+//                    char c = (char) System.in.read();
+//                    String res = "\rkey: " + c;
+//                    if (c == '1') {
+//                        int d = System.in.read();
+//                        if (d != ';') {
+//                            throw new RuntimeException("expected ';', got " + d);
+//                        }
+//                        c = (char) System.in.read();
+//                        res += ";" + c;
+//                    }
+//                    c = (char) System.in.read();
+//                    res += ";" + c;
+//                    System.out.println(res);
+//                    if (key == 27) {
+//                        ReadableByteChannel inChannel = Channels.newChannel(System.in);
+//                        ByteBuffer buffer = ByteBuffer.allocate(256);
+//
+//                        long startTime = System.currentTimeMillis();
+//                        while (System.currentTimeMillis() - startTime < 100) { // 5-second timeout
+//                            inChannel.read(buffer);
+//                        }
+//                        buffer.flip(); // Prepare for reading
+//                        System.out.println("\r" + new String(buffer.array(), 0, buffer.limit()));
+//                    } else {
+//                        System.out.print('\r');
+//                        System.out.print("ASCII: " + key);
+//                        if (printable((char) key)) {
+//                            System.out.print(", Key: " + (char) key);
+//                        }
+//                        System.out.println();
+//                        if (key == 'q') { // Quit on 'q'
+//                            break;
+//                        }
+//                    }
+//                }
+            }
+            disableRawMode();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        running = false;
+    }
+
+    static void enableRawMode() throws IOException {
+        String[] command = {"/bin/sh", "-c", "stty raw -echo < /dev/tty"};
+        Runtime.getRuntime().exec(command);
+    }
+
+    static void enableRawEchoMode() throws IOException {
+        String[] command = {"/bin/sh", "-c", "stty raw < /dev/tty"};
+        Runtime.getRuntime().exec(command);
+    }
+
+    static void disableRawMode() throws IOException {
+        String[] command = {"/bin/sh", "-c", "stty cooked echo < /dev/tty"};
+        Runtime.getRuntime().exec(command);
+    }
+
+    public void GlobalKeyHandling() {
+        ArrayList<byte[]> toRemove = new ArrayList<>();
+//        System.out.print(Arrays.toString(active_keys.peek()));
+//        System.out.print(", ");
+//        System.out.println(Arrays.toString(KeyCodes.N.getCtrlCode()));
+        for (KeyBind keybind : AVandiniEliaBzGuessGame.global_keybinds) {
+            for (byte[] pressed_key : active_keys) {
+                for (byte[] key : keybind.keys) {
+                    if (Arrays.equals(pressed_key, key)) {
+                        toRemove.add(key);
+                        keybind.exec(key);
+                        break;
+                    }
+                }
+            }
+        }
+        KeyListenenThread.active_keys.removeAll(toRemove);
+    }
+
+    static boolean printable(char d) {
+        if ((d > 31 && d < 128) || (d > 160)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+class TextBox implements Serializable {
+
+    StringBuilder text = new StringBuilder();
+    int cursor_pos = 0;
+    Point selection_pos = new Point(-1, -1);
+    boolean command_mode = true;
+    static ArrayList<String> command_history = new ArrayList<>();
+    static int history_index = 0;
+    String result;
+
+    void set_base_keymap() {
+        KeyListenenThread.keymap.clear();
+//        KeyListenenThread.keymap.put(KeyCodes.ESCAPE.getCode())
+        KeyListenenThread.keymap.put(KeyCodes.ENTER.getCode(), n -> submit());
+        KeyListenenThread.keymap.put(KeyCodes.DELETE.getCode(), n -> delete(KeyModifier.NONE, false));
+        KeyListenenThread.keymap.put(KeyCodes.BACKSPACE.getCode(), n -> delete(KeyModifier.NONE, true));
+        KeyListenenThread.keymap.put(KeyCodes.DELETE.getCtrlCode(), n -> delete(KeyModifier.CTRL, false));
+        KeyListenenThread.keymap.put(KeyCodes.BACKSPACE.getCtrlCode(), n -> delete(KeyModifier.CTRL, true));
+//        KeyListenenThread.keymap.put(KeyCodes.UP_ARROW.getCode())
+//        KeyListenenThread.keymap.put(KeyCodes.DOWN_ARROW.getCode())
+
+        KeyListenenThread.keymap.put(KeyCodes.END.getCode(), n -> move_cursor(KeyModifier.ALT, +1));
+        KeyListenenThread.keymap.put(KeyCodes.HOME.getCode(), n -> move_cursor(KeyModifier.ALT, -1));
+        KeyListenenThread.keymap.put(KeyCodes.RIGHT_ARROW.getCode(), n -> move_cursor(KeyModifier.NONE, +1));
+        KeyListenenThread.keymap.put(KeyCodes.LEFT_ARROW.getCode(), n -> move_cursor(KeyModifier.NONE, -1));
+        KeyListenenThread.keymap.put(KeyCodes.RIGHT_ARROW.getShiftCode(), n -> move_cursor(KeyModifier.SHIFT, +1));
+        KeyListenenThread.keymap.put(KeyCodes.LEFT_ARROW.getShiftCode(), n -> move_cursor(KeyModifier.SHIFT, -1));
+        KeyListenenThread.keymap.put(KeyCodes.RIGHT_ARROW.getCtrlCode(), n -> move_cursor(KeyModifier.CTRL, +1));
+        KeyListenenThread.keymap.put(KeyCodes.LEFT_ARROW.getCtrlCode(), n -> move_cursor(KeyModifier.CTRL, -1));
+        KeyListenenThread.keymap.put(KeyCodes.RIGHT_ARROW.getAltCode(), n -> move_cursor(KeyModifier.ALT, +1));
+        KeyListenenThread.keymap.put(KeyCodes.LEFT_ARROW.getAltCode(), n -> move_cursor(KeyModifier.ALT, -1));
+        KeyListenenThread.keymap.put(KeyCodes.RIGHT_ARROW.getAltShiftCode(), n -> move_cursor(KeyModifier.ALT_SHIFT, +1));
+        KeyListenenThread.keymap.put(KeyCodes.LEFT_ARROW.getAltShiftCode(), n -> move_cursor(KeyModifier.ALT_SHIFT, -1));
+
+        KeyListenenThread.keymap.put(KeyCodes.DOWN_ARROW.getCode(), n -> cycle_history_down());
+        KeyListenenThread.keymap.put(KeyCodes.UP_ARROW.getCode(), n -> cycle_history_up());
+        KeyListenenThread.keymap.put(KeyCodes.DOWN_ARROW.getShiftCode(), n -> cycle_history_bottom());
+        KeyListenenThread.keymap.put(KeyCodes.UP_ARROW.getShiftCode(), n -> cycle_history_top());
+
+        KeyListenenThread.keymap.put(KeyCodes.NUM_1.getCode(), n -> insert("1"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_2.getCode(), n -> insert("2"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_3.getCode(), n -> insert("3"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_4.getCode(), n -> insert("4"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_5.getCode(), n -> insert("5"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_6.getCode(), n -> insert("6"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_7.getCode(), n -> insert("7"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_8.getCode(), n -> insert("8"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_9.getCode(), n -> insert("9"));
+        KeyListenenThread.keymap.put(KeyCodes.NUM_0.getCode(), n -> insert("0"));
+        KeyListenenThread.keymap.put(KeyCodes.PERIOD.getCode(), n -> insert("."));
+
+        KeyListenenThread.keymap.put(KeyCodes.A.getCode(), n -> insert("a"));
+        KeyListenenThread.keymap.put(KeyCodes.B.getCode(), n -> insert("b"));
+        KeyListenenThread.keymap.put(KeyCodes.C.getCode(), n -> insert("c"));
+        KeyListenenThread.keymap.put(KeyCodes.D.getCode(), n -> insert("d"));
+        KeyListenenThread.keymap.put(KeyCodes.E.getCode(), n -> insert("e"));
+        KeyListenenThread.keymap.put(KeyCodes.F.getCode(), n -> insert("f"));
+        KeyListenenThread.keymap.put(KeyCodes.G.getCode(), n -> insert("g"));
+        KeyListenenThread.keymap.put(KeyCodes.H.getCode(), n -> insert("h"));
+        KeyListenenThread.keymap.put(KeyCodes.I.getCode(), n -> insert("i"));
+        KeyListenenThread.keymap.put(KeyCodes.J.getCode(), n -> insert("j"));
+        KeyListenenThread.keymap.put(KeyCodes.K.getCode(), n -> insert("k"));
+        KeyListenenThread.keymap.put(KeyCodes.L.getCode(), n -> insert("l"));
+        KeyListenenThread.keymap.put(KeyCodes.M.getCode(), n -> insert("m"));
+        KeyListenenThread.keymap.put(KeyCodes.N.getCode(), n -> insert("n"));
+        KeyListenenThread.keymap.put(KeyCodes.O.getCode(), n -> insert("o"));
+        KeyListenenThread.keymap.put(KeyCodes.P.getCode(), n -> insert("p"));
+        KeyListenenThread.keymap.put(KeyCodes.Q.getCode(), n -> insert("q"));
+        KeyListenenThread.keymap.put(KeyCodes.R.getCode(), n -> insert("r"));
+        KeyListenenThread.keymap.put(KeyCodes.S.getCode(), n -> insert("s"));
+        KeyListenenThread.keymap.put(KeyCodes.T.getCode(), n -> insert("t"));
+        KeyListenenThread.keymap.put(KeyCodes.U.getCode(), n -> insert("u"));
+        KeyListenenThread.keymap.put(KeyCodes.V.getCode(), n -> insert("v"));
+        KeyListenenThread.keymap.put(KeyCodes.W.getCode(), n -> insert("w"));
+        KeyListenenThread.keymap.put(KeyCodes.X.getCode(), n -> insert("x"));
+        KeyListenenThread.keymap.put(KeyCodes.Y.getCode(), n -> insert("y"));
+        KeyListenenThread.keymap.put(KeyCodes.Z.getCode(), n -> insert("z"));
+
+        KeyListenenThread.keymap.put(KeyCodes.A.getShiftCode(), n -> insert("A"));
+        KeyListenenThread.keymap.put(KeyCodes.B.getShiftCode(), n -> insert("B"));
+        KeyListenenThread.keymap.put(KeyCodes.C.getShiftCode(), n -> insert("C"));
+        KeyListenenThread.keymap.put(KeyCodes.D.getShiftCode(), n -> insert("D"));
+        KeyListenenThread.keymap.put(KeyCodes.E.getShiftCode(), n -> insert("E"));
+        KeyListenenThread.keymap.put(KeyCodes.F.getShiftCode(), n -> insert("F"));
+        KeyListenenThread.keymap.put(KeyCodes.G.getShiftCode(), n -> insert("G"));
+        KeyListenenThread.keymap.put(KeyCodes.H.getShiftCode(), n -> insert("H"));
+        KeyListenenThread.keymap.put(KeyCodes.I.getShiftCode(), n -> insert("I"));
+        KeyListenenThread.keymap.put(KeyCodes.J.getShiftCode(), n -> insert("J"));
+        KeyListenenThread.keymap.put(KeyCodes.K.getShiftCode(), n -> insert("K"));
+        KeyListenenThread.keymap.put(KeyCodes.L.getShiftCode(), n -> insert("L"));
+        KeyListenenThread.keymap.put(KeyCodes.M.getShiftCode(), n -> insert("M"));
+        KeyListenenThread.keymap.put(KeyCodes.N.getShiftCode(), n -> insert("N"));
+        KeyListenenThread.keymap.put(KeyCodes.O.getShiftCode(), n -> insert("O"));
+        KeyListenenThread.keymap.put(KeyCodes.P.getShiftCode(), n -> insert("P"));
+        KeyListenenThread.keymap.put(KeyCodes.Q.getShiftCode(), n -> insert("Q"));
+        KeyListenenThread.keymap.put(KeyCodes.R.getShiftCode(), n -> insert("R"));
+        KeyListenenThread.keymap.put(KeyCodes.S.getShiftCode(), n -> insert("S"));
+        KeyListenenThread.keymap.put(KeyCodes.T.getShiftCode(), n -> insert("T"));
+        KeyListenenThread.keymap.put(KeyCodes.U.getShiftCode(), n -> insert("U"));
+        KeyListenenThread.keymap.put(KeyCodes.V.getShiftCode(), n -> insert("V"));
+        KeyListenenThread.keymap.put(KeyCodes.W.getShiftCode(), n -> insert("W"));
+        KeyListenenThread.keymap.put(KeyCodes.X.getShiftCode(), n -> insert("X"));
+        KeyListenenThread.keymap.put(KeyCodes.Y.getShiftCode(), n -> insert("Y"));
+        KeyListenenThread.keymap.put(KeyCodes.Z.getShiftCode(), n -> insert("Z"));
+
+    }
+
+    void set_guess_mode_keymap() {
+        set_base_keymap();
+    }
+
+    void set_comand_mode_keymap() {
+        set_base_keymap();
+
+        KeyListenenThread.keymap.put(KeyCodes.SPACE.getCode(), n -> insert(" "));
+    }
+
+    void submit() {
+        result = text.toString();
+        command_history.set(0, text.toString());
+        history_index = 0;
+        text = new StringBuilder();
+        cursor_pos = 0;
+        command_history.addFirst("");
+        System.out.println();
+    }
+
+    void cycle_history_up() {
+        if (command_history.isEmpty()) {
+            return;
+        }
+        if (history_index == 0) {
+            command_history.set(0, text.toString());
+        }
+//        if (!text.toString().equals(command_history.get(history_index))) {
+//            history_index = 0;
+//        }
+        if (history_index >= command_history.size() - 1) {
+            return;
+        }
+        history_index++;
+        text = new StringBuilder(command_history.get(history_index));
+        cursor_pos = text.length();
+    }
+
+    void cycle_history_down() {
+        if (command_history.isEmpty()) {
+            return;
+        }
+//        if (!text.toString().equals(command_history.get(history_index))) {
+//            history_index = 0;
+//        }
+        if (history_index <= 0) {
+            return;
+        }
+        history_index--;
+        text = new StringBuilder(command_history.get(history_index));
+        cursor_pos = text.length();
+    }
+
+    void cycle_history_top() {
+        if (command_history.isEmpty()) {
+            return;
+        }
+        if (history_index == 0) {
+            command_history.set(0, text.toString());
+        }
+        history_index = command_history.size() - 1;
+        text = new StringBuilder(command_history.get(history_index));
+        cursor_pos = text.length();
+    }
+
+    void cycle_history_bottom() {
+        if (command_history.isEmpty()) {
+            return;
+        }
+        history_index = 0;
+        text = new StringBuilder(command_history.get(history_index));
+        cursor_pos = text.length();
+    }
+
+    int findWordEndToRight(String input, int start_pos) {
+        if (input == null || input.isEmpty()) {
+            return 0;
+        }
+        if (start_pos == input.length()) {
+            return input.length();
+        }
+        int i = start_pos + 1;
+        while (i < input.length() && Character.isWhitespace(input.charAt(i))) {
+            i++;
+        }
+        if (i == input.length()) {
+            return input.length();
+        }
+        while (i < input.length() && !Character.isWhitespace(input.charAt(i))) {
+            i++;
+        }
+        return i;
+    }
+
+    int findWordStartToLeft(String input, int start_pos) {
+        if (input == null || input.isEmpty()) {
+            return 0;
+        }
+        if (start_pos == 0) {
+            return 0;
+        }
+        int i = start_pos - 1;
+        while (i >= 0 && Character.isWhitespace(input.charAt(i))) {
+            i--;
+        }
+        if (i < 0) {
+            return 0;
+        }
+        while (i >= 0 && !Character.isWhitespace(input.charAt(i))) {
+            i--;
+        }
+        return i + 1;
+    }
+
+    void move_cursor(KeyModifier modifier, int pos) {
+        if (modifier == KeyModifier.ALT) {
+            if (pos < 0) {
+                cursor_pos = 0;
+            } else if (pos > 0) {
+                cursor_pos = text.length();
+            }
+        }
+        if (modifier == KeyModifier.CTRL || modifier == KeyModifier.ALT_SHIFT) {
+            if (pos < 0) {
+                cursor_pos = findWordStartToLeft(text.toString(), cursor_pos);
+            } else if (pos > 0) {
+                cursor_pos = findWordEndToRight(text.toString(), cursor_pos);
+            }
+        }
+        if (modifier == KeyModifier.SHIFT || modifier == KeyModifier.NONE) {
+            cursor_pos += pos;
+        }
+        if (modifier == KeyModifier.SHIFT || modifier == KeyModifier.ALT_SHIFT) {
+            selection_pos.y = cursor_pos;
+        } else {
+            selection_pos.x = cursor_pos;
+            selection_pos.y = cursor_pos;
+        }
+    }
+
+    void delete(KeyModifier modifier, boolean backspace) {
+        if (selection_pos.x < selection_pos.y) {
+            text.delete(selection_pos.x, selection_pos.y);
+            cursor_pos = selection_pos.x;
+            selection_pos.y = selection_pos.x;
+        } else if (selection_pos.y < selection_pos.x) {
+            text.delete(selection_pos.y, selection_pos.x);
+            cursor_pos = selection_pos.y;
+            selection_pos.x = selection_pos.y;
+        } else if (backspace) {
+            if (modifier == KeyModifier.CTRL) {
+                int wordStartToLeft = findWordStartToLeft(text.toString(), cursor_pos);
+                text.delete(wordStartToLeft, cursor_pos);
+                cursor_pos = wordStartToLeft;
+            } else if (cursor_pos > 0) {
+                text.delete(cursor_pos - 1, cursor_pos);
+                cursor_pos--;
+            }
+        } else {
+            if (modifier == KeyModifier.CTRL) {
+                text.delete(cursor_pos, findWordEndToRight(text.toString(), cursor_pos));
+            } else if (cursor_pos < text.length()) {
+                text.delete(cursor_pos, cursor_pos + 1);
+            }
+        }
+    }
+
+    void insert(String s) {
+        text.insert(cursor_pos, s);
+        cursor_pos += s.length();
+        validate_cursor_pos();
+        validate_selection_pos();
+    }
+
+    void validate_cursor_pos() {
+        if (cursor_pos > text.length()) {
+            cursor_pos = text.length();
+        }
+        if (cursor_pos < 0) {
+            cursor_pos = 0;
+        }
+    }
+
+    void validate_selection_pos() {
+        if (selection_pos.x > text.length()) {
+            selection_pos.x = text.length();
+        }
+        if (selection_pos.x < 0) {
+            selection_pos.x = 0;
+        }
+
+        if (selection_pos.y > text.length()) {
+            selection_pos.y = text.length();
+        }
+        if (selection_pos.y < 0) {
+            selection_pos.y = 0;
+        }
+    }
+
+    char getCharSafely(StringBuilder sb, int index, char fallback) {
+        if (index >= 0 && index < sb.length()) {
+            return sb.charAt(index);
+        } else {
+            return fallback;
+        }
+    }
+
+    String get_input(Game parent) {
+        result = "";
+
+        set_guess_mode_keymap();
+
+        long last_tick = System.currentTimeMillis();
+
+        if (command_history.isEmpty()) {
+            command_history = new ArrayList<>();
+            command_history.addFirst(text.toString());
+        }
+
+        while (!parent.lost && !parent.won && !parent.ai && AVandiniEliaBzGuessGame.current_game == parent) {
+            if (System.currentTimeMillis() < last_tick + 1) {
+                continue;
+            }
+            last_tick = System.currentTimeMillis();
+
+
+            AVandiniEliaBzGuessGame.KeyHandling();
+            validate_cursor_pos();
+            validate_selection_pos();
+            if (!result.isEmpty()) {
+                KeyListenenThread.keymap.clear();
+                if (!command_mode) {
+                    result = result.toUpperCase();
+                }
+                return result;
+            }
+            if (getCharSafely(text, 0, ' ') == '.' && !command_mode) {
+                command_mode = true;
+                set_comand_mode_keymap();
+            } else if (getCharSafely(text, 0, ' ') != '.' && command_mode) {
+                command_mode = false;
+                set_guess_mode_keymap();
+            }
+
+            AVandiniEliaBzGuessGame.eraseLine();
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
+            System.out.print(parent.attempts_left + "> ");
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            String to_display = text.toString();
+            if (!command_mode) {
+                to_display = to_display.toUpperCase();
+            }
+            System.out.print(to_display);
+            if (selection_pos.x != selection_pos.y) {
+//                System.out.print(selection_pos.x + " != " + selection_pos.y);
+                AVandiniEliaBzGuessGame.moveCursor(min(selection_pos.x, selection_pos.y) + 5, CursorMoveDirection.COLUMN);
+                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                System.out.print(to_display.substring(min(selection_pos.x, selection_pos.y), max(selection_pos.x, selection_pos.y)));
+                AVandiniEliaBzGuessGame.resetAttrributes();
+                AVandiniEliaBzGuessGame.moveCursor(to_display.length() + 5, CursorMoveDirection.COLUMN);
+            }
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            System.out.print(" ");
+//            System.out.print(command_history);
+
+            AVandiniEliaBzGuessGame.moveCursor(5 + cursor_pos, CursorMoveDirection.COLUMN);
+        }
+        return "";
     }
 }
