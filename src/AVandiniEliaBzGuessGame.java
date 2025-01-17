@@ -43,6 +43,15 @@ enum CursorStyles implements AbstarctAttributes {
     public int getIndex() {
         return index;
     }
+
+    public static CursorStyles getCursorStyles(int index) {
+        for (CursorStyles cursorStyles : CursorStyles.values()) {
+            if (cursorStyles.getIndex() == index) {
+                return cursorStyles;
+            }
+        }
+        return null;
+    }
 }
 
 /**
@@ -180,13 +189,13 @@ class InvalidInputException extends Exception {
 /**
  * Class to serialize and manage game state.
  */
-class GameSerilizer implements Serializable {
+class GameSerializer implements Serializable {
     long highscore = 0;
     ArrayList<Game> games = new ArrayList<Game>();
     Game current_game;
     CursorStyles cursorStyles;
 
-    public GameSerilizer(long highscore, ArrayList<Game> games, Game current_game, CursorStyles cursorStyles) {
+    public GameSerializer(long highscore, ArrayList<Game> games, Game current_game, CursorStyles cursorStyles) {
         this.highscore = highscore;
         this.games = games;
         this.current_game = current_game;
@@ -200,7 +209,7 @@ class GameSerilizer implements Serializable {
      * @param filePath  the path to the file
      * @throws IOException if an I/O error occurs
      */
-    public static void saveGameState(GameSerilizer gameState, String filePath) throws IOException {
+    public static void saveGameState(GameSerializer gameState, String filePath) throws IOException {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
             oos.writeObject(gameState);  // Serialize the GameState object
         }
@@ -214,9 +223,9 @@ class GameSerilizer implements Serializable {
      * @throws IOException            if an I/O error occurs
      * @throws ClassNotFoundException if the class of a serialized object cannot be found
      */
-    public static GameSerilizer loadGameState(String filePath) throws IOException, ClassNotFoundException {
+    public static GameSerializer loadGameState(String filePath) throws IOException, ClassNotFoundException {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
-            return (GameSerilizer) ois.readObject();  // Deserialize and cast the object
+            return (GameSerializer) ois.readObject();  // Deserialize and cast the object
         }
     }
 }
@@ -224,6 +233,7 @@ class GameSerilizer implements Serializable {
 /**
  * Main class for the BzGuessGame.
  */
+
 class AVandiniEliaBzGuessGame {
     public static final String Author = "Eia Vandini";
     public static final String Version = "v1.34";
@@ -234,7 +244,7 @@ class AVandiniEliaBzGuessGame {
     static KeyBind[] global_keybinds = new KeyBind[]{new KeyBindClose(), new KeyBindNew()};
     static ArrayList<Game> games = new ArrayList<Game>();
     static Game current_game;
-    static GameSerilizer gameSerilizer = new GameSerilizer(highscore, games, current_game, cursorStyle);
+    static GameSerializer gameSerailizer = new GameSerializer(highscore, games, current_game, cursorStyle);
     static Thread kyThread = new KeyListenenThread();
 
     /**
@@ -257,10 +267,10 @@ class AVandiniEliaBzGuessGame {
         File f = new File("GameState.ser");
         if (f.exists()) {
             try {
-                gameSerilizer = GameSerilizer.loadGameState("GameState.ser");
-                highscore = gameSerilizer.highscore;
-                games = gameSerilizer.games;
-                current_game = gameSerilizer.current_game;
+                gameSerailizer = GameSerializer.loadGameState("GameState.ser");
+                highscore = gameSerailizer.highscore;
+                games = gameSerailizer.games;
+                current_game = gameSerailizer.current_game;
                 if (current_game.won || current_game.lost) {
                     newGame();
                 } else {
@@ -268,7 +278,7 @@ class AVandiniEliaBzGuessGame {
                 }
             } catch (Exception e) {
                 setAttribute(FColors.YELLOW);
-                System.out.println("WARNING: unable to read gamestate");
+                System.out.println("WARNING: unable to read gamestate (" + Arrays.toString(e.getStackTrace()) + ")");
                 resetAttrributes();
                 newGame();
             }
@@ -281,14 +291,14 @@ class AVandiniEliaBzGuessGame {
      * Saves the current game state to a file.
      */
     static void saveGameState() {
-        gameSerilizer.highscore = highscore;
-        gameSerilizer.games = games;
-        gameSerilizer.current_game = current_game;
+        gameSerailizer.highscore = highscore;
+        gameSerailizer.games = games;
+        gameSerailizer.current_game = current_game;
         try {
-            GameSerilizer.saveGameState(gameSerilizer, "GameState.ser");
+            GameSerializer.saveGameState(gameSerailizer, "GameState.ser");
         } catch (IOException e) {
             setAttribute(FColors.YELLOW);
-            System.out.println("WARNING: unable to save gamestate");
+            System.out.println("WARNING: unable to save gamestate (" + e.getMessage() + ")");
             resetAttrributes();
         }
     }
@@ -387,6 +397,7 @@ class AVandiniEliaBzGuessGame {
             System.out.println();
             AVandiniEliaBzGuessGame.eraseLinesUp(1);
         }
+        AVandiniEliaBzGuessGame.showCursor();
         AVandiniEliaBzGuessGame.eraseLinesUp(3);
         if (seleciton.get() == 0) {
             newGame();
@@ -423,7 +434,14 @@ class AVandiniEliaBzGuessGame {
      * @param lines the number of lines to erase
      */
     static void eraseLinesUp(int lines) {
+        if (lines == 0) {
+            return;
+        }
         moveCursor(lines, CursorMoveDirection.UPX);
+        System.out.print("\u001b[0J");
+    }
+
+    static void eraseLinesToEndOfScreen() {
         System.out.print("\u001b[0J");
     }
 
@@ -486,11 +504,11 @@ class AVandiniEliaBzGuessGame {
     }
 
     static void saveCursorPosition() {
-        System.out.println("\u001b[s");
+        System.out.print("\u001b[s");
     }
 
     static void restoreCursorPosition() {
-        System.out.println("\u001b[u");
+        System.out.print("\u001b[u");
     }
 
     static void setCursorStyle(CursorStyles style) {
@@ -540,6 +558,16 @@ class AVandiniEliaBzGuessGame {
         }
         KeyListenenThread.active_keys.clear();
         return processed_key;
+    }
+
+    static void shuffleCharArray(char[] input) {
+        Random random = new Random();
+        for (int i = input.length - 1; i > 0; i--) {
+            int index = random.nextInt(i + 1);
+            char x = input[index];
+            input[index] = input[i];
+            input[i] = x;
+        }
     }
 }
 
@@ -685,7 +713,7 @@ class CommandP extends Command {
     }
 
     void exec(String[] args) {
-        System.out.println("\r" + AVandiniEliaBzGuessGame.current_game.code);
+        System.out.println("\rCode is " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code));
     }
 }
 
@@ -750,7 +778,6 @@ class CommandNew extends Command {
     }
 
     void exec(String[] args) {
-        System.out.println(AVandiniEliaBzGuessGame.current_game.code);
         AVandiniEliaBzGuessGame.current_game.lost = true;
         AVandiniEliaBzGuessGame.newGame();
     }
@@ -780,6 +807,9 @@ class CommandSetCode extends Command {
         if (args[0].length() != 4) {
             throw new InvalidInputException("new code may only contain 4 characters");
         }
+        if (args[0].matches(".*[^ABCDEFabcdef].*")) {
+            throw new InvalidInputException("new code must consist of A, B, C, D, E or F");
+        }
         for (int i = 0; i < args[0].length(); i++) {
             char ch = args[0].toUpperCase().charAt(i);
             boolean char_found = false;
@@ -793,7 +823,7 @@ class CommandSetCode extends Command {
             }
         }
         AVandiniEliaBzGuessGame.current_game.code = args[0].toUpperCase().toCharArray();
-        System.out.println("the secret code has been updated");
+        System.out.println("\rThe secret code has been updated");
     }
 }
 
@@ -812,16 +842,22 @@ class CommandBuy extends Command {
     }
 
     void exec(String[] args) {
-        Random r = new Random();
-        char[] res_string = {'_', '_', '_', '_'};
-        int pos = r.nextInt(4);
-        res_string[pos] = AVandiniEliaBzGuessGame.current_game.code[pos];
+        ArrayList<Integer> free_char_pos = new ArrayList<Integer>();
+        for (int i = 0; i < 4; i++) {
+            if (AVandiniEliaBzGuessGame.current_game.discovered_chars[i] == '_') {
+                free_char_pos.add(i);
+            }
+        }
+        AVandiniEliaBzGuessGame.shuffleCharArray(AVandiniEliaBzGuessGame.current_game.discovered_chars);
+
+
+        AVandiniEliaBzGuessGame.current_game.discovered_chars[pos] = AVandiniEliaBzGuessGame.current_game.code[pos];
 
         AVandiniEliaBzGuessGame.current_game.solver.possibleCodes.removeIf(n -> n[pos] != AVandiniEliaBzGuessGame.current_game.code[pos]);
 
         AVandiniEliaBzGuessGame.current_game.attempts_left -= 5;
-        AVandiniEliaBzGuessGame.current_game.history += AVandiniEliaBzGuessGame.current_game.attempts_left + "> The User bought " + Arrays.toString(res_string) + " using up 5 attempts\n";
-        System.out.println("\r" + res_string);
+        AVandiniEliaBzGuessGame.current_game.history += AVandiniEliaBzGuessGame.current_game.attempts_left + "> The User bought " + Arrays.toString(discovered_chars) + " using up 5 attempts\n";
+        System.out.println("\r" + discovered_chars);
     }
 }
 
@@ -848,6 +884,7 @@ class CommandHistory extends Command {
         AtomicBoolean loop = new AtomicBoolean(true);
         AtomicBoolean cancel = new AtomicBoolean(false);
         AtomicInteger seleciton = new AtomicInteger();
+        seleciton.set(AVandiniEliaBzGuessGame.games.size() - 1);
 
         KeyListenenThread.keymap.clear();
         KeyListenenThread.keymap.put(KeyCodes.ENTER.getCode(), n -> loop.set(false));
@@ -870,10 +907,10 @@ class CommandHistory extends Command {
 //                sb.append(AVandiniEliaBzGuessGame.games.size() - 1 - i).append(") ");
                 if (AVandiniEliaBzGuessGame.current_game == g) {
                     sb.append(" @ ");
-                } else if (g.lost) {
-                    sb.append(" L ");
                 } else if (g.won) {
                     sb.append(" W ");
+                } else if (g.lost) {
+                    sb.append(" L ");
                 } else {
                     sb.append("   ");
                 }
@@ -967,72 +1004,42 @@ class CommandChangeCursorStyle extends Command {
             KeyListenenThread.keymap.put(KeyCodes.Q.getCode(), n -> cancel.set(true));
             KeyListenenThread.keymap.put(KeyCodes.ESCAPE.getCode(), n -> cancel.set(true));
 
-            AVandiniEliaBzGuessGame.hideCursor();
             System.out.println("\rSelect a cursor style to apply");
             System.out.println("\rUse Arrow keys to navigate selection, enter to confirm and C or esc to cancel");
             System.out.println("\r");
 
+            CursorStyles prev_style = AVandiniEliaBzGuessGame.cursorStyle;
+
+            ArrayList<String> list = new ArrayList<>();
+            list.add("\r ● Blink Block ");
+            list.add("\r ● Blinking Block ");
+            list.add("\r ● Steady Block ");
+            list.add("\r ● Blinking Underline ");
+            list.add("\r ● Steady Underline ");
+            list.add("\r ● Blinking Bar ");
+            list.add("\r ● Steady Bar ");
+
             while (loop.get() && !cancel.get()) {
 
-
-                if (seleciton.get() == 0) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                for (int i = 0; i < list.size(); i++) {
+                    if (seleciton.get() == i) {
+                        AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+                    }
+                    System.out.print(list.get(i));
+                    AVandiniEliaBzGuessGame.resetAttrributes();
+                    if (seleciton.get() == i) {
+                        System.out.print("  ");
+                        AVandiniEliaBzGuessGame.saveCursorPosition();
+                        AVandiniEliaBzGuessGame.setCursorStyle(Objects.requireNonNull(CursorStyles.getCursorStyles(i)));
+                    }
+                    System.out.println();
                 }
-                System.out.print("\rBlink Block ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
+                AVandiniEliaBzGuessGame.restoreCursorPosition();
 
 
-                if (seleciton.get() == 1) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                }
-                System.out.print("\rBlinking Block ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
-
-
-                if (seleciton.get() == 2) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                }
-                System.out.print("\rSteady Block ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
-
-
-                if (seleciton.get() == 3) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                }
-                System.out.print("\rBlinking Underline ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
-
-
-                if (seleciton.get() == 4) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                }
-                System.out.print("\rSteady Underline ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
-
-
-                if (seleciton.get() == 5) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                }
-                System.out.print("\rBlinking Bar ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
-
-
-                if (seleciton.get() == 6) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                }
-                System.out.print("\rSteady Bar ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                System.out.println();
-
-
-                long start = System.currentTimeMillis();
-                while (!AVandiniEliaBzGuessGame.KeyHandling() && System.currentTimeMillis() < start + 500) {
+//                long start = System.currentTimeMillis();
+                int prev_seleciton = seleciton.get();
+                while (!AVandiniEliaBzGuessGame.KeyHandling()) {
                     AVandiniEliaBzGuessGame.wait(10);
                 }
                 if (seleciton.get() < 0) {
@@ -1042,34 +1049,16 @@ class CommandChangeCursorStyle extends Command {
                     seleciton.set(0);
                 }
 
-                AVandiniEliaBzGuessGame.eraseLinesUp(7);
+                AVandiniEliaBzGuessGame.eraseLinesUp(prev_seleciton);
             }
             AVandiniEliaBzGuessGame.eraseLinesUp(3);
-        }
+            AVandiniEliaBzGuessGame.eraseLinesToEndOfScreen();
 
-        switch (seleciton.get()) {
-            case (0):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINK_BLOCK);
-                break;
-            case (1):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_BLOCK);
-                break;
-            case (2):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.STEADY_BLOCK);
-                break;
-            case (3):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_UNDERLINE);
-                break;
-            case (4):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.STEADY_UNDERLINE);
-                break;
-            case (5):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.BLINKING_BAR);
-                break;
-            case (6):
-                AVandiniEliaBzGuessGame.setCursorStyle(CursorStyles.STEADY_BAR);
-                break;
-
+            if (cancel.get()) {
+                AVandiniEliaBzGuessGame.setCursorStyle(prev_style);
+            } else {
+                AVandiniEliaBzGuessGame.cursorStyle = CursorStyles.getCursorStyles(seleciton.get());
+            }
         }
     }
 }
@@ -1213,6 +1202,7 @@ class Game implements Serializable {
     ArrayList<Point> matches = new ArrayList<Point>();
     ArrayList<char[]> guesses = new ArrayList<char[]>();
     boolean ai = false;
+    char[] discovered_chars = {'_', '_', '_', '_'};
 
     static TextBox textBox = new TextBox();
 
@@ -1251,7 +1241,7 @@ class Game implements Serializable {
      */
     void execeTurn() {
         parseInput();
-        if (attempts_left <= 0) {
+        if (attempts_left <= 0 && !won && !ai) {
             lost = true;
         }
     }
@@ -1302,8 +1292,8 @@ class Game implements Serializable {
                 throw new InvalidInputException("please input a command or 4 character sequence");
             }
             if (input.charAt(0) == '.') {
-                input = input.substring(1);
-                String[] args = input.split(" ");
+                String temp = input.substring(1);
+                String[] args = temp.split(" ");
                 parseCommand(args[0], Arrays.copyOfRange(args, 1, args.length));
                 return;
             }
@@ -1380,7 +1370,7 @@ class Game implements Serializable {
         if (p.x >= 4) {
             won = true;
         }
-        AVandiniEliaBzGuessGame.current_game.history += attempts_left + ">" + input + " " + result + '\n';
+        AVandiniEliaBzGuessGame.current_game.history += attempts_left + "> " + input + " " + result + '\n';
         return result.toString();
     }
 
@@ -1413,13 +1403,17 @@ class Game implements Serializable {
      * @param attempts_left the remaining attempts
      * @return the calculated score
      */
-    static int score_calc(long time, int attempts_left) {
+    static long score_calc(long time, long attempts_left) {
+        if (attempts_left > 19
+        ) {
+            attempts_left = 19;
+        }
         double secs_per_attempt = (double) time / (20 - attempts_left) / 1000;
         if (secs_per_attempt > 60) {
             secs_per_attempt = 60;
         }
         double score = ((pow(secs_per_attempt, 2) / 180) - (secs_per_attempt * (13f / 20f)) + 20); // x^2/180 - x*13/20 + 20
-        return (int) (score * 10) * (attempts_left * 10);
+        return (long) (score * 10) * (attempts_left * 10);
     }
 
     /**
@@ -1428,7 +1422,7 @@ class Game implements Serializable {
     void finishGame() {
         if (won) {
             long diff = abs(new Date().getTime() - this.start_date.getTime());
-            score = score_calc(diff, (int) attempts_left);
+            score = score_calc(diff, attempts_left);
             if (score > AVandiniEliaBzGuessGame.highscore && !AVandiniEliaBzGuessGame.current_game.ai) {
                 AVandiniEliaBzGuessGame.highscore = score;
             }
@@ -1594,8 +1588,8 @@ enum KeyCodes {
     NUM_0(new byte[]{48}, new byte[]{48}, new byte[]{48}, new byte[]{48}, new byte[]{48}),
     //    MULTIPLY(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
 //    ADD(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
-//    SUBTRACT(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
-//    DECIMAL_POINT(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
+    SUBTRACT(new byte[]{45}, new byte[]{45}, new byte[]{45}, new byte[]{45}, new byte[]{45}),
+    //    DECIMAL_POINT(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
 //    DIVIDE(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}),
     F1(new byte[]{27, 79, 80}, new byte[]{27, 79, 80}, new byte[]{27, 91, 49, 59, 53, 80}, new byte[]{27, 79, 80}, new byte[]{27, 79, 80}),
     F2(new byte[]{27, 79, 81}, new byte[]{27, 79, 81}, new byte[]{27, 91, 49, 59, 53, 81}, new byte[]{27, 79, 81}, new byte[]{27, 79, 81}),
@@ -1926,7 +1920,7 @@ class TextBox implements Serializable {
 
     void set_comand_mode_keymap() {
         set_base_keymap();
-
+        KeyListenenThread.keymap.put(KeyCodes.SUBTRACT.getCode(), n -> insert("-"));
         KeyListenenThread.keymap.put(KeyCodes.SPACE.getCode(), n -> insert(" "));
     }
 
@@ -2174,19 +2168,20 @@ class TextBox implements Serializable {
                 to_display = to_display.toUpperCase();
             }
             System.out.print(to_display);
+            int box_offset = String.valueOf(parent.attempts_left).length() + 3;
             if (selection_pos.x != selection_pos.y) {
 //                System.out.print(selection_pos.x + " != " + selection_pos.y);
-                AVandiniEliaBzGuessGame.moveCursor(min(selection_pos.x, selection_pos.y) + 5, CursorMoveDirection.COLUMN);
+                AVandiniEliaBzGuessGame.moveCursor(min(selection_pos.x, selection_pos.y) + box_offset, CursorMoveDirection.COLUMN);
                 AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
                 System.out.print(to_display.substring(min(selection_pos.x, selection_pos.y), max(selection_pos.x, selection_pos.y)));
                 AVandiniEliaBzGuessGame.resetAttrributes();
-                AVandiniEliaBzGuessGame.moveCursor(to_display.length() + 5, CursorMoveDirection.COLUMN);
+                AVandiniEliaBzGuessGame.moveCursor(to_display.length() + box_offset, CursorMoveDirection.COLUMN);
             }
             AVandiniEliaBzGuessGame.resetAttrributes();
             System.out.print(" ");
 //            System.out.print(command_history);
 
-            AVandiniEliaBzGuessGame.moveCursor(5 + cursor_pos, CursorMoveDirection.COLUMN);
+            AVandiniEliaBzGuessGame.moveCursor(box_offset + cursor_pos, CursorMoveDirection.COLUMN);
         }
         return "";
     }
