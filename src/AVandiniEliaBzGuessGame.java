@@ -1,4 +1,33 @@
-import java.awt.*;
+/**
+ * MIT License
+ * <p>
+ * Copyright (c) 2025 Vandini Elia
+ * <p>
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * <p>
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * <p>
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/*
+ Dear Reader,
+ This code is part of a 
+
+ */
+
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -9,22 +38,33 @@ import java.util.function.Consumer;
 import static java.lang.Math.*;
 
 /**
- * Enum representing different categories of commands.
+ * Represents different categories of commands available in the game.
+ * Each category groups commands based on their functionality.
  */
 enum CommandCategory {
-    BASIC,
-    INGAME,
-    STORE,
-    SECRET
+    BASIC,  // Basic commands like help or quit.
+    INGAME, // Commands used during gameplay.
+    STORE,  // Commands related to in-game purchases.
+    SECRET  // Hidden or special commands.
 }
 
 /**
- * Interface for attributes with an index.
+ * Provides a method to retrieve the index associated with the attribute.
+ * This interface is used by enumerations representing styles, colors, or other attributes.
  */
 interface AbstarctAttributes {
+    /**
+     * Retrieves the index of the attribute.
+     *
+     * @return the index representing the attribute.
+     */
     int getIndex();
 }
 
+/**
+ * Enum representing various cursor styles.
+ * Each style has a unique index for terminal display configuration.
+ */
 enum CursorStyles implements AbstarctAttributes {
     BLINK_BLOCK(0),
     BLINKING_BLOCK(1),
@@ -36,14 +76,28 @@ enum CursorStyles implements AbstarctAttributes {
 
     private final int index;
 
+    /**
+     * Constructs a CursorStyles enumeration with the specified index.
+     *
+     * @param index the index associated with the cursor style.
+     */
     CursorStyles(int index) {
         this.index = index;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getIndex() {
         return index;
     }
 
+    /**
+     * Retrieves a cursor style based on its index.
+     *
+     * @param index the index of the cursor style to retrieve.
+     * @return the corresponding CursorStyles instance, or null if not found.
+     */
     public static CursorStyles getCursorStyles(int index) {
         for (CursorStyles cursorStyles : CursorStyles.values()) {
             if (cursorStyles.getIndex() == index) {
@@ -55,7 +109,8 @@ enum CursorStyles implements AbstarctAttributes {
 }
 
 /**
- * Enum for text attributes used in console output.
+ * Enum representing text attributes for styling text in the terminal.
+ * Each attribute is associated with a specific index.
  */
 enum TextAttributes implements AbstarctAttributes {
     RESET(0),
@@ -70,17 +125,26 @@ enum TextAttributes implements AbstarctAttributes {
 
     private final int index;
 
+    /**
+     * Constructs a TextAttributes enumeration with the specified index.
+     *
+     * @param index the index associated with the text attribute.
+     */
     TextAttributes(int index) {
         this.index = index;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getIndex() {
         return index;
     }
 }
 
 /**
- * Enum for resetting text attributes.
+ * Enum representing reset attributes for text styles.
+ * These attributes are used to reset specific text styles in the terminal.
  */
 enum ResetTextAttributes implements AbstarctAttributes {
     RESET_BRIGHT(22),
@@ -94,17 +158,26 @@ enum ResetTextAttributes implements AbstarctAttributes {
 
     private final int index;
 
+    /**
+     * Constructs a ResetTextAttributes enumeration with the specified index.
+     *
+     * @param index the index associated with the reset attribute.
+     */
     ResetTextAttributes(int index) {
         this.index = index;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getIndex() {
         return index;
     }
 }
 
 /**
- * Enum for foreground colors.
+ * Enum representing foreground colors for text in the terminal.
+ * Each color is associated with a unique index for styling purposes.
  */
 enum FColors implements AbstarctAttributes {
     BLACK(30),
@@ -118,17 +191,26 @@ enum FColors implements AbstarctAttributes {
 
     private final int index;
 
+    /**
+     * Constructs an FColors enumeration with the specified index.
+     *
+     * @param index the index representing the foreground color.
+     */
     FColors(int index) {
         this.index = index;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getIndex() {
         return index;
     }
 }
 
 /**
- * Enum for background colors.
+ * Enum representing background colors for text in the terminal.
+ * Each color is associated with a unique index for styling purposes.
  */
 enum BColors implements AbstarctAttributes {
     BLACK(40),
@@ -142,17 +224,26 @@ enum BColors implements AbstarctAttributes {
 
     private final int index;
 
+    /**
+     * Constructs a BColors enumeration with the specified index.
+     *
+     * @param index the index representing the background color.
+     */
     BColors(int index) {
         this.index = index;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int getIndex() {
         return index;
     }
 }
 
 /**
- * Enum for cursor move directions.
+ * Enum representing directions for cursor movement in the terminal.
+ * Each direction is associated with a label used in terminal control sequences.
  */
 enum CursorMoveDirection {
     UP('A'),
@@ -165,103 +256,176 @@ enum CursorMoveDirection {
 
     private final char label;
 
+    /**
+     * Constructs a CursorMoveDirection enumeration with the specified label.
+     *
+     * @param index the label representing the direction.
+     */
     CursorMoveDirection(char index) {
         this.label = index;
     }
 
+    /**
+     * Retrieves the label associated with the cursor movement direction.
+     *
+     * @return the label as a character.
+     */
     public char getLabel() {
         return label;
     }
 }
 
 /**
- * Exception thrown for invalid inputs.
+ * Exception representing invalid input scenarios in the game.
+ * Used to handle user or programmatic errors with specific messages.
  */
 class InvalidInputException extends Exception {
+    /**
+     * Constructs a default InvalidInputException.
+     */
     public InvalidInputException() {
     }
 
+    /**
+     * Constructs an InvalidInputException with a specific error message.
+     *
+     * @param message the detailed error message.
+     */
     public InvalidInputException(String message) {
         super(message);
     }
 }
 
+
 /**
- * Class to serialize and manage game state.
+ * Represents a point on a two-dimensional grid, but is not really used as such in this project.
+ * Typically used for storing feedback values (x, y) for guesses.
+ */
+class Point implements Serializable {
+    int x; // x-coordinate, representing correct characters in the correct position.
+    int y; // y-coordinate, representing correct characters in the wrong position.
+
+    /**
+     * Constructs a Point with specified x and y values.
+     *
+     * @param x the x-coordinate.
+     * @param y the y-coordinate.
+     */
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    /**
+     * Constructs a default Point with x and y initialized to 0.
+     */
+    public Point() {
+        this(0, 0);
+    }
+}
+
+/**
+ * Serializable class for managing game state persistence.
+ * This class allows saving and loading the game's state, including high scores, game history,
+ * and current game progress.
  */
 class GameSerializer implements Serializable {
-    long highscore = 0;
-    ArrayList<Game> games = new ArrayList<Game>();
-    Game current_game;
-    CursorStyles cursorStyles;
+    long highscore = 0; // The highest score achieved.
+    ArrayList<Game> games = new ArrayList<Game>(); // List of all games played.
+    Game current_game; // The current active game.
+    CursorStyles cursorStyles; // The style of the cursor used in the game.
+    ArrayList<String> command_history; // The history of past guesses and commands
 
-    public GameSerializer(long highscore, ArrayList<Game> games, Game current_game, CursorStyles cursorStyles) {
+    /**
+     * Constructs a GameSerializer with the provided game state data.
+     *
+     * @param highscore       the highest score achieved.
+     * @param games           the list of games played.
+     * @param current_game    the currently active game.
+     * @param cursorStyles    the cursor style used in the game.
+     * @param command_history the command and guess history of the game
+     */
+    public GameSerializer(long highscore, ArrayList<Game> games, Game current_game, CursorStyles cursorStyles, ArrayList<String> command_history) {
         this.highscore = highscore;
         this.games = games;
         this.current_game = current_game;
         this.cursorStyles = cursorStyles;
+        this.command_history = command_history;
     }
 
     /**
-     * Saves the game state to a specified file.
+     * Saves the current game state to a file.
      *
-     * @param gameState the game state to save
-     * @param filePath  the path to the file
-     * @throws IOException if an I/O error occurs
+     * @param gameState the game state to save.
+     * @param filePath  the path of the file where the game state will be saved.
+     * @throws IOException if an error occurs during file writing.
      */
     public static void saveGameState(GameSerializer gameState, String filePath) throws IOException {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
-            oos.writeObject(gameState);  // Serialize the GameState object
+            oos.writeObject(gameState); // Serialize the GameSerializer object.
         }
     }
 
     /**
-     * Loads the game state from a specified file.
+     * Loads the game state from a file.
      *
-     * @param filePath the path to the file
-     * @return the loaded game state
-     * @throws IOException            if an I/O error occurs
-     * @throws ClassNotFoundException if the class of a serialized object cannot be found
+     * @param filePath the path of the file containing the saved game state.
+     * @return the loaded GameSerializer object.
+     * @throws IOException            if an error occurs during file reading.
+     * @throws ClassNotFoundException if the class definition is not found.
      */
     public static GameSerializer loadGameState(String filePath) throws IOException, ClassNotFoundException {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
-            return (GameSerializer) ois.readObject();  // Deserialize and cast the object
+            return (GameSerializer) ois.readObject(); // Deserialize and return the GameSerializer object.
         }
     }
 }
 
 /**
- * Main class for the BzGuessGame.
+ * Main class for the BzGuessGame application.
+ * This class contains the game's entry point, configurations, and core methods.
  */
-
 class AVandiniEliaBzGuessGame {
-    public static final String Author = "Eia Vandini";
-    public static final String Version = "v1.34";
-    static char[] options = {'A', 'B', 'C', 'D', 'E', 'F'};
-    static CursorStyles cursorStyle = CursorStyles.BLINKING_BAR;
-    static long highscore = 0;
-    static Command[] comands = new Command[]{new CommandHelp(), new CommandP(), new CommandSetCode(), new CommandRemains(), new CommandBuy(), new CommandQuit(), new CommandNew(), new CommandHistory(), new CommandRules(), new CommandClose(), new CommandBuyAI(), new CommandAI(), new CommandUnlimitedAttempts(), new CommandChangeCursorStyle()};
-    static KeyBind[] global_keybinds = new KeyBind[]{new KeyBindClose(), new KeyBindNew()};
-    static ArrayList<Game> games = new ArrayList<Game>();
-    static Game current_game;
-    static GameSerializer gameSerailizer = new GameSerializer(highscore, games, current_game, cursorStyle);
-    static Thread kyThread = new KeyListenenThread();
+    public static final String Author = "Eia Vandini"; // The author of the game.
+    public static final String Version = "v1.34"; // The current version of the game.
+
+    static char[] options = {'A', 'B', 'C', 'D', 'E', 'F'}; // Possible characters in the secret code.
+    static CursorStyles cursorStyle = CursorStyles.BLINKING_BAR; // Default cursor style.
+    static long highscore = 0; // Current high score.
+    static Command[] comands = new Command[]{
+            new CommandHelp(), new CommandKeybinds(), new CommandP(), new CommandSetCode(), new CommandRemains(),
+            new CommandBuy(), new CommandQuit(), new CommandNew(), new CommandHistory(),
+            new CommandRules(), new CommandClose(), new CommandBuyAI(), new CommandAI(),
+            new CommandUnlimitedAttempts(), new CommandChangeCursorStyle()
+    }; // Array of game commands.
+
+    static KeyBind[] global_keybinds = new KeyBind[]{new KeyBindClose(), new KeyBindNew()}; // Global key bindings.
+    static ArrayList<Game> games = new ArrayList<Game>(); // List of games played.
+    static Game current_game; // The current game instance.
+    static GameSerializer gameSerailizer = new GameSerializer(highscore, games, current_game, cursorStyle, TextBox.command_history); // Serializer for game state.
+    static Thread kyThread = new KeyListenenThread(); // Thread for key listening.
 
     /**
-     * Main method to start the game.
+     * The main method for the application.
+     * Initializes the game, loads saved state, and starts the key listening thread.
      *
-     * @param args command-line arguments
+     * @param args command-line arguments (not used).
      */
     public static void main(String[] args) {
         AVandiniEliaBzGuessGame.setCursorStyle(cursorStyle);
         greeting();
         kyThread.start();
         loadGamestate();
+        if (current_game.won || current_game.lost) {
+            newGame();
+        }
+        current_game.gameloop();
         saveGameState();
     }
 
     /**
-     * Loads the game state from a file if it exists, otherwise starts a new game.
+     * Loads the game state from the saved file if it exists.
+     * If the game state cannot be loaded or is invalid, a new game is started.
      */
     static void loadGamestate() {
         File f = new File("GameState.ser");
@@ -271,11 +435,7 @@ class AVandiniEliaBzGuessGame {
                 highscore = gameSerailizer.highscore;
                 games = gameSerailizer.games;
                 current_game = gameSerailizer.current_game;
-                if (current_game.won || current_game.lost) {
-                    newGame();
-                } else {
-                    current_game.gameloop();
-                }
+                TextBox.command_history = gameSerailizer.command_history;
             } catch (Exception e) {
                 setAttribute(FColors.YELLOW);
                 System.out.println("WARNING: unable to read gamestate (" + Arrays.toString(e.getStackTrace()) + ")");
@@ -289,11 +449,13 @@ class AVandiniEliaBzGuessGame {
 
     /**
      * Saves the current game state to a file.
+     * If saving fails, a warning message is displayed.
      */
     static void saveGameState() {
         gameSerailizer.highscore = highscore;
         gameSerailizer.games = games;
         gameSerailizer.current_game = current_game;
+        gameSerailizer.command_history = TextBox.command_history;
         try {
             GameSerializer.saveGameState(gameSerailizer, "GameState.ser");
         } catch (IOException e) {
@@ -304,7 +466,8 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Displays a greeting message.
+     * Displays a greeting message to the player at the start of the game.
+     * Also provides help by executing the help command.
      */
     static void greeting() {
         System.out.println("\rProgrammed by Vandini Elia");
@@ -313,7 +476,8 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Displays the win screen with score.
+     * Displays a win screen message when the player successfully guesses the secret code.
+     * Also prompts the player to decide whether to play again.
      */
     static void winScreen() {
         System.out.println("\rCongratulations, Score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
@@ -321,7 +485,8 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Displays the win screen with score.
+     * Displays a hypothetical win screen message when the AI successfully completes the game.
+     * Also prompts the player to decide whether to play again.
      */
     static void aiWinScreen() {
         System.out.println("\rHypothetical score is " + AVandiniEliaBzGuessGame.current_game.score + ", (Highscore: " + highscore + ")");
@@ -329,7 +494,8 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Displays the lose screen with the secret code.
+     * Displays a loss screen message when the player fails to guess the secret code.
+     * Also reveals the correct code and prompts the player to decide whether to play again.
      */
     static void loosescreen() {
         System.out.println("\rYou lost! Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
@@ -337,7 +503,8 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Displays the lose screen with the secret code.
+     * Displays a loss screen message when the AI fails to complete the game.
+     * Also reveals the correct code and prompts the player to decide whether to play again.
      */
     static void aiLooseScreen() {
         System.out.println("\rNot even the AI could save you☠\uFE0F. Secret code was " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code) + ".");
@@ -345,11 +512,10 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Asks the player if they want to play again.
+     * Prompts the player to decide whether to play another game.
+     * Handles key inputs for "Yes" or "No" options and executes the appropriate action.
      */
     static void askIfPlayAgain() {
-
-
         AtomicBoolean loop = new AtomicBoolean(true);
         AtomicBoolean cancel = new AtomicBoolean(false);
         AtomicInteger seleciton = new AtomicInteger();
@@ -398,7 +564,7 @@ class AVandiniEliaBzGuessGame {
             AVandiniEliaBzGuessGame.eraseLinesUp(1);
         }
         AVandiniEliaBzGuessGame.showCursor();
-        AVandiniEliaBzGuessGame.eraseLinesUp(3);
+        AVandiniEliaBzGuessGame.eraseLinesUp(2);
         if (seleciton.get() == 0) {
             newGame();
         } else {
@@ -409,9 +575,10 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Initializes a new game.
+     * Starts a new game by creating a new instance of the Game class.
+     * Adds the new game to the list of games and sets it as the current game.
      *
-     * @return the new game instance
+     * @return the new Game instance.
      */
     static Game newGame() {
         Game g = new Game();
@@ -422,7 +589,8 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Erases the current line in the console.
+     * Erases the current line in the terminal.
+     * Clears the line and resets the cursor to the beginning of the line.
      */
     static void eraseLine() {
         System.out.print("\u001b[2K\r");
@@ -430,8 +598,9 @@ class AVandiniEliaBzGuessGame {
 
     /**
      * Erases a specified number of lines above the current cursor position.
+     * Moves the cursor up and clears lines in the terminal.
      *
-     * @param lines the number of lines to erase
+     * @param lines the number of lines to erase.
      */
     static void eraseLinesUp(int lines) {
         if (lines == 0) {
@@ -441,23 +610,26 @@ class AVandiniEliaBzGuessGame {
         System.out.print("\u001b[0J");
     }
 
+    /**
+     * Erases all lines from the current cursor position to the end of the screen.
+     */
     static void eraseLinesToEndOfScreen() {
         System.out.print("\u001b[0J");
     }
 
     /**
-     * Sets text attributes for console output.
+     * Sets a specific terminal text attribute.
      *
-     * @param attr the attribute to set
+     * @param attr the attribute to set, represented as an AbstarctAttributes instance.
      */
     static void setAttribute(AbstarctAttributes attr) {
         System.out.printf("\u001b[%dm", attr.getIndex());
     }
 
     /**
-     * Sets multiple text attributes for console output.
+     * Sets multiple terminal text attributes at once.
      *
-     * @param attr an array of attributes to set
+     * @param attr an array of attributes to set.
      */
     static void setAttribute(AbstarctAttributes[] attr) {
         for (AbstarctAttributes a : attr) {
@@ -466,56 +638,73 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Resets text attributes to default.
+     * Resets all text attributes in the terminal to default.
      */
     static void resetAttrributes() {
         setAttribute(TextAttributes.RESET);
     }
 
     /**
-     * Clears the console screen.
+     * Clears the entire terminal screen and moves the cursor to the top-left corner.
      */
     static void clearScreen() {
         System.out.print("\u001b[H\u001b[2J");
     }
 
     /**
-     * Hides the console cursor.
+     * Hides the terminal cursor to enhance display aesthetics.
      */
     static void hideCursor() {
         System.out.print("\u001b[?25l");
     }
 
     /**
-     * Shows the console cursor.
+     * Shows the terminal cursor if it is currently hidden.
      */
     static void showCursor() {
         System.out.print("\u001b[?25h");
     }
 
     /**
-     * Moves the cursor in the console.
+     * Moves the cursor in a specified direction by a given number of positions.
      *
-     * @param pos       the position to move
-     * @param direction the direction to move
+     * @param pos       the number of positions to move.
+     * @param direction the direction to move the cursor, represented by CursorMoveDirection.
      */
     static void moveCursor(int pos, CursorMoveDirection direction) {
         System.out.print("\u001b[" + pos + direction.getLabel());
     }
 
+    /**
+     * Saves the current cursor position in the terminal.
+     */
     static void saveCursorPosition() {
         System.out.print("\u001b[s");
     }
 
+    /**
+     * Restores the cursor position to the last saved position in the terminal.
+     */
     static void restoreCursorPosition() {
         System.out.print("\u001b[u");
     }
 
+    /**
+     * Sets the cursor style in the terminal.
+     * May not work on all devices or terminal configurations.
+     *
+     * @param style the cursor style to apply, represented by CursorStyles.
+     */
     static void setCursorStyle(CursorStyles style) {
         System.out.print("\u001b[" + style.getIndex() + " q");
     }
 
-
+    /**
+     * Prints a string to the terminal with an animated effect.
+     * Each character is displayed with a delay, followed by a dot effect.
+     *
+     * @param res the string to print with the animation.
+     */
     static void fancyprint(String res) {
         for (char c : res.toCharArray()) {
             System.out.print(c + "●");
@@ -531,9 +720,9 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
-     * Waits for a specified number of milliseconds.
+     * Pauses the program execution for a specified duration in milliseconds.
      *
-     * @param ms milliseconds to wait
+     * @param ms the duration of the pause in milliseconds.
      */
     public static void wait(int ms) {
         try {
@@ -543,6 +732,12 @@ class AVandiniEliaBzGuessGame {
         }
     }
 
+    /**
+     * Handles key inputs during the game.
+     * Processes active keys from the input queue and triggers the corresponding actions.
+     *
+     * @return true if a key was successfully processed; false otherwise.
+     */
     static boolean KeyHandling() {
         boolean processed_key = false;
         for (byte[] pressed_key : new ArrayList<>(KeyListenenThread.active_keys)) {
@@ -560,6 +755,11 @@ class AVandiniEliaBzGuessGame {
         return processed_key;
     }
 
+    /**
+     * Shuffles the characters in a given array randomly.
+     *
+     * @param input the array of characters to shuffle.
+     */
     static void shuffleCharArray(char[] input) {
         Random random = new Random();
         for (int i = input.length - 1; i > 0; i--) {
@@ -571,37 +771,69 @@ class AVandiniEliaBzGuessGame {
     }
 }
 
+/**
+ * Represents a key binding that links specific key sequences to an action.
+ */
 class KeyBind {
-    String shortel;
-    String description;
-    byte[][] keys;
+    String shortel; // The short description of the key binding.
+    String description; // The detailed description of the key binding.
+    byte[][] keys; // The byte sequences representing the keys for this binding.
 
+    /**
+     * Executes the action associated with this key binding.
+     *
+     * @param pressedKey the key that was pressed.
+     */
     void exec(byte[] pressedKey) {
     }
 }
 
+/**
+ * Key binding for closing the game.
+ * Saves the game state and terminates the application.
+ */
 class KeyBindClose extends KeyBind {
 
+    /**
+     * Constructs a KeyBindClose with the predefined key sequence and description.
+     */
     KeyBindClose() {
         shortel = "^Q";
         description = "Saves and close the game";
         keys = new byte[][]{KeyCodes.Q.getCtrlCode()};
     }
 
+    /**
+     * Executes the close action by invoking the CommandClose functionality.
+     *
+     * @param pressedKey the key that was pressed.
+     */
     @Override
     void exec(byte[] pressedKey) {
         new CommandClose().exec(new String[]{});
     }
 }
 
+/**
+ * Key binding for starting a new game.
+ * Allows the player to reset the game and begin anew.
+ */
 class KeyBindNew extends KeyBind {
 
+    /**
+     * Constructs a KeyBindNew with the predefined key sequence and description.
+     */
     KeyBindNew() {
         shortel = "^N";
         description = "Starts a new game";
         keys = new byte[][]{KeyCodes.N.getCtrlCode()};
     }
 
+    /**
+     * Executes the action to start a new game by invoking the CommandNew functionality.
+     *
+     * @param pressedKey the key that was pressed.
+     */
     @Override
     void exec(byte[] pressedKey) {
         new CommandNew().exec(new String[]{});
@@ -609,24 +841,35 @@ class KeyBindNew extends KeyBind {
 }
 
 /**
- * Abstract class representing a command in the game.
+ * Represents a game command, including its name, shortcuts, category, and functionality.
+ * Commands are used to interact with the game or perform specific actions.
  */
 class Command {
-    String fullName;
-    String longc;
-    String shortc;
-    CommandCategory category;
-    String description;
+    String fullName; // The full name of the command.
+    String longc; // The long form of the command trigger.
+    String shortc; // The short form of the command trigger.
+    CommandCategory category; // The category to which the command belongs.
+    String description; // A detailed description of the command.
 
+    /**
+     * Executes the action defined by the command.
+     *
+     * @param args the arguments passed with the command.
+     * @throws InvalidInputException if the input is invalid for the command.
+     */
     void exec(String[] args) throws InvalidInputException {
     }
 }
 
 /**
- * Command to display help information.
+ * Command to display help information for all available commands.
+ * Lists commands grouped by their categories and provides descriptions.
  */
 class CommandHelp extends Command {
 
+    /**
+     * Constructs a CommandHelp with predefined attributes.
+     */
     CommandHelp() {
         super();
         category = CommandCategory.BASIC;
@@ -636,6 +879,11 @@ class CommandHelp extends Command {
         fullName = "Help";
     }
 
+    /**
+     * Executes the help command by displaying available commands and their descriptions.
+     *
+     * @param args the arguments passed with the command (e.g., to show secret commands).
+     */
     void exec(String[] args) {
         boolean show_secret = false;
         if (args.length > 0 && args[0].equals("-s")) {
@@ -663,10 +911,53 @@ class CommandHelp extends Command {
 }
 
 /**
- * Command to display the game rules.
+ * Command to display help information for all available Keybinds.
+ * Lists Keybinds and provides descriptions.
+ */
+class CommandKeybinds extends Command {
+
+    /**
+     * Constructs a CommandKeybinds with predefined attributes.
+     */
+    CommandKeybinds() {
+        super();
+        category = CommandCategory.BASIC;
+        longc = "keys";
+        shortc = "k";
+        description = "Display a help screen explaining the game keybinds";
+        fullName = "Keybinds";
+    }
+
+    /**
+     * Executes the help command by displaying available keybinds and their descriptions.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
+    void exec(String[] args) {
+        String space_storage = "                 ";
+
+        System.out.println("\r ^X stands for the ctrl modifyer (eg. ^C is ctrl+C");
+        System.out.println();
+        for (KeyBind keyBind : AVandiniEliaBzGuessGame.global_keybinds) {
+            String help_string = "\r    " + keyBind.shortel;
+            help_string = help_string + space_storage.substring(help_string.length()) + keyBind.description;
+            System.out.println(help_string);
+        }
+        System.out.println();
+        System.out.println("\rYou can also use the arrow combined with alt and/or shift to move around the input bar."
+                + "\n\rThe up and down arrow keys will let you cycle your input history");
+    }
+}
+
+/**
+ * Command to display the rules of the game.
+ * Provides detailed instructions and guidelines for playing the game.
  */
 class CommandRules extends Command {
 
+    /**
+     * Constructs a CommandRules with predefined attributes.
+     */
     CommandRules() {
         super();
         category = CommandCategory.BASIC;
@@ -676,6 +967,11 @@ class CommandRules extends Command {
         fullName = "Rules";
     }
 
+    /**
+     * Executes the rules command by displaying the game rules and gameplay instructions.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
         System.out.println("\r╔═══════════════════════════════════════════════════════════════════════════╗");
         System.out.println("\r║                             BzGuessGame Help                              ║");
@@ -690,7 +986,7 @@ class CommandRules extends Command {
         System.out.println("\r║   -: Correct character but at the wrong position.                         ║");
         System.out.println("\r║                                                                           ║");
         System.out.println("\r║ Check out available commands with .help or .h!                            ║");
-        System.out.println("\r║ To execute a command prefix a '.' before the command.                     ║");
+        System.out.println("\r║ To execute a command, prefix a '.' before the command.                    ║");
         System.out.println("\r║ 'HELP' will be interpreted as a guess while '.help' or '.h' is a command. ║");
         System.out.println("\r║                                                                           ║ ");
         System.out.println("\r║ Good luck!                                                                ║");
@@ -700,18 +996,27 @@ class CommandRules extends Command {
 
 /**
  * Command to reveal the secret code.
+ * This is categorized as a secret command and is primarily for debugging or cheating.
  */
 class CommandP extends Command {
 
+    /**
+     * Constructs a CommandP with predefined attributes.
+     */
     CommandP() {
         super();
         category = CommandCategory.SECRET;
         longc = "p";
         shortc = "p";
-        description = "reveals the code";
-        fullName = "p";
+        description = "Reveals the code";
+        fullName = "Reveal Code";
     }
 
+    /**
+     * Executes the command to print the secret code to the terminal.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
         System.out.println("\rCode is " + Arrays.toString(AVandiniEliaBzGuessGame.current_game.code));
     }
@@ -719,18 +1024,27 @@ class CommandP extends Command {
 
 /**
  * Command to quit the game.
+ * Marks the current game as lost and ends the session.
  */
 class CommandQuit extends Command {
 
+    /**
+     * Constructs a CommandQuit with predefined attributes.
+     */
     CommandQuit() {
         super();
         category = CommandCategory.BASIC;
         longc = "quit";
         shortc = "q";
-        description = "reveals the code and quits the game";
+        description = "Reveals the code and quits the game";
         fullName = "Quit";
     }
 
+    /**
+     * Executes the quit command by marking the current game as lost.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
         AVandiniEliaBzGuessGame.current_game.lost = true;
     }
@@ -738,18 +1052,27 @@ class CommandQuit extends Command {
 
 /**
  * Command to close the game.
+ * Saves the game state and terminates the application cleanly.
  */
 class CommandClose extends Command {
 
+    /**
+     * Constructs a CommandClose with predefined attributes.
+     */
     CommandClose() {
         super();
         category = CommandCategory.BASIC;
         longc = "close";
         shortc = "c";
-        description = "saves game and quits";
-        fullName = "Close";
+        description = "Saves game and quits";
+        fullName = "Close Game";
     }
 
+    /**
+     * Executes the close command by saving the game state and exiting the application.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
         KeyListenenThread.running = false;
         try {
@@ -765,9 +1088,13 @@ class CommandClose extends Command {
 
 /**
  * Command to start a new game.
+ * Resets the current game and begins a new one.
  */
 class CommandNew extends Command {
 
+    /**
+     * Constructs a CommandNew with predefined attributes.
+     */
     CommandNew() {
         super();
         category = CommandCategory.INGAME;
@@ -777,6 +1104,11 @@ class CommandNew extends Command {
         fullName = "New Game";
     }
 
+    /**
+     * Executes the new game command by marking the current game as lost and starting a new game.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
         AVandiniEliaBzGuessGame.current_game.lost = true;
         AVandiniEliaBzGuessGame.newGame();
@@ -784,31 +1116,42 @@ class CommandNew extends Command {
 }
 
 /**
- * Command to set the secret code.
+ * Command to set a custom secret code.
+ * Allows users to define their own code for the game.
  */
 class CommandSetCode extends Command {
 
+    /**
+     * Constructs a CommandSetCode with predefined attributes.
+     */
     CommandSetCode() {
         super();
         category = CommandCategory.SECRET;
         longc = "setcode";
         shortc = "S";
-        description = "set the secret code to a user input";
-        fullName = "SetCode";
+        description = "Set the secret code to a user input";
+        fullName = "Set Code";
     }
 
+    /**
+     * Executes the set code command, allowing the user to define a new secret code.
+     * Validates the input for length and allowed characters.
+     *
+     * @param args the arguments passed with the command, containing the new code.
+     * @throws InvalidInputException if the input is invalid.
+     */
     void exec(String[] args) throws InvalidInputException {
         if (args.length > 1) {
-            throw new InvalidInputException("only one argument expected");
+            throw new InvalidInputException("Only one argument expected");
         }
         if (args.length < 1) {
-            throw new InvalidInputException("at least one argument expected");
+            throw new InvalidInputException("At least one argument expected");
         }
         if (args[0].length() != 4) {
-            throw new InvalidInputException("new code may only contain 4 characters");
+            throw new InvalidInputException("New code may only contain 4 characters");
         }
         if (args[0].matches(".*[^ABCDEFabcdef].*")) {
-            throw new InvalidInputException("new code must consist of A, B, C, D, E or F");
+            throw new InvalidInputException("New code must consist of A, B, C, D, E, or F");
         }
         for (int i = 0; i < args[0].length(); i++) {
             char ch = args[0].toUpperCase().charAt(i);
@@ -819,7 +1162,7 @@ class CommandSetCode extends Command {
                 }
             }
             if (!char_found) {
-                throw new InvalidInputException("new code contains invalid characters");
+                throw new InvalidInputException("New code contains invalid characters");
             }
         }
         AVandiniEliaBzGuessGame.current_game.code = args[0].toUpperCase().toCharArray();
@@ -829,9 +1172,13 @@ class CommandSetCode extends Command {
 
 /**
  * Command to buy a letter of the secret code.
+ * Reveals one letter of the code in its correct position for a cost of 5 attempts.
  */
 class CommandBuy extends Command {
 
+    /**
+     * Constructs a CommandBuy with predefined attributes.
+     */
     CommandBuy() {
         super();
         category = CommandCategory.STORE;
@@ -841,31 +1188,101 @@ class CommandBuy extends Command {
         fullName = "Buy";
     }
 
+    /**
+     * Executes the buy command, revealing a single character in the correct position.
+     * Reduces the number of attempts by 5.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
-        ArrayList<Integer> free_char_pos = new ArrayList<Integer>();
-        for (int i = 0; i < 4; i++) {
-            if (AVandiniEliaBzGuessGame.current_game.discovered_chars[i] == '_') {
-                free_char_pos.add(i);
-            }
-        }
-        AVandiniEliaBzGuessGame.shuffleCharArray(AVandiniEliaBzGuessGame.current_game.discovered_chars);
+        Random r = new Random();
+        char[] res_string = {'_', '_', '_', '_'};
+        int pos = r.nextInt(4); // Randomly selects a position to reveal.
+        res_string[pos] = AVandiniEliaBzGuessGame.current_game.code[pos];
 
-
-        AVandiniEliaBzGuessGame.current_game.discovered_chars[pos] = AVandiniEliaBzGuessGame.current_game.code[pos];
-
-        AVandiniEliaBzGuessGame.current_game.solver.possibleCodes.removeIf(n -> n[pos] != AVandiniEliaBzGuessGame.current_game.code[pos]);
+        // Removes possible codes that don't match the revealed letter.
+        AVandiniEliaBzGuessGame.current_game.solver.possibleCodes.removeIf(
+                n -> n[pos] != AVandiniEliaBzGuessGame.current_game.code[pos]
+        );
 
         AVandiniEliaBzGuessGame.current_game.attempts_left -= 5;
-        AVandiniEliaBzGuessGame.current_game.history += AVandiniEliaBzGuessGame.current_game.attempts_left + "> The User bought " + Arrays.toString(discovered_chars) + " using up 5 attempts\n";
-        System.out.println("\r" + discovered_chars);
+        AVandiniEliaBzGuessGame.current_game.history += AVandiniEliaBzGuessGame.current_game.attempts_left
+                + "> The User bought " + Arrays.toString(res_string) + " using up 5 attempts\n";
+        System.out.println("\r" + Arrays.toString(res_string));
+
+
+//        not implementing this yet
+//        ArrayList<Integer> free_char_pos = new ArrayList<Integer>();
+//        for (int i = 0; i < 4; i++) {
+//            if (AVandiniEliaBzGuessGame.current_game.discovered_chars[i] == '_') {
+//                free_char_pos.add(i);
+//            }
+//        }
+//
+//        long start = System.currentTimeMillis();
+//
+//        long last_tick = System.currentTimeMillis();
+//
+//        StringBuilder[] canvas = new StringBuilder[]{
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//                new StringBuilder("                                   "),
+//        };
+//
+//        StringBuilder sequence = new StringBuilder();
+//        for (int i = 65; i < 123; i++) {
+//            sequence.append((char) i);
+//        }
+//
+//        Random r = new Random();
+//
+//        int index1 = r.nextInt(122 - 65);
+//
+//        for (StringBuilder y : canvas) {
+//            System.out.println("\r" + y);
+//        }
+//
+//
+//        while (System.currentTimeMillis() < start + 6000) {
+//            if (System.currentTimeMillis() < last_tick + ((System.currentTimeMillis() - start) / 10)) {
+//                continue;
+//            }
+//            AVandiniEliaBzGuessGame.eraseLinesUp(canvas.length);
+//            last_tick = System.currentTimeMillis();
+//
+//            int i = index1;
+//            String s = sequence.substring(i % sequence.length(), sequence.length()) + sequence.substring(0, i % sequence.length());
+//            for (int j = 0; j < 8; j++) {
+//                canvas[j + 1].setCharAt(2, s.charAt(8 - j));
+//            }
+//            index1 += 1;
+//
+//
+//            for (StringBuilder y : canvas) {
+//                System.out.println("\r" + y);
+//            }
+//
+//        }
+
+
     }
 }
 
 /**
- * Command to display the history of guesses.
+ * Command to display the history of all guesses and evaluations of past games.
+ * Allows users to navigate through past game details.
  */
 class CommandHistory extends Command {
 
+    /**
+     * Constructs a CommandHistory with predefined attributes.
+     */
     CommandHistory() {
         super();
         category = CommandCategory.INGAME;
@@ -875,11 +1292,17 @@ class CommandHistory extends Command {
         fullName = "History";
     }
 
+    /**
+     * Executes the history command, displaying a navigable list of game histories.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     * @throws InvalidInputException if no game history is available.
+     */
     void exec(String[] args) throws InvalidInputException {
-
         if (AVandiniEliaBzGuessGame.games.isEmpty()) {
-            throw new InvalidInputException("start a game before trying to access the game history");
+            throw new InvalidInputException("Start a game before trying to access the game history");
         }
+
 
         AtomicBoolean loop = new AtomicBoolean(true);
         AtomicBoolean cancel = new AtomicBoolean(false);
@@ -971,21 +1394,31 @@ class CommandHistory extends Command {
     }
 }
 
-
 /**
- * Command to display the history of guesses.
+ * Command to change the cursor style during gameplay.
+ * Allows users to select a different cursor style from the available options.
  */
 class CommandChangeCursorStyle extends Command {
 
+    /**
+     * Constructs a CommandChangeCursorStyle with predefined attributes.
+     */
     CommandChangeCursorStyle() {
         super();
         category = CommandCategory.INGAME;
         longc = "cursor";
         shortc = "C";
         description = "Change cursor style (may not work on some devices)";
-        fullName = "Change cursor style";
+        fullName = "Change Cursor Style";
     }
 
+    /**
+     * Executes the command to allow the user to change the cursor style.
+     * Provides an interactive menu for selecting the style.
+     *
+     * @param args the arguments passed with the command, optionally containing the style index.
+     * @throws InvalidInputException if the input is invalid or an error occurs.
+     */
     void exec(String[] args) throws InvalidInputException {
         AtomicInteger seleciton = new AtomicInteger(AVandiniEliaBzGuessGame.cursorStyle.getIndex());
 
@@ -1005,7 +1438,7 @@ class CommandChangeCursorStyle extends Command {
             KeyListenenThread.keymap.put(KeyCodes.ESCAPE.getCode(), n -> cancel.set(true));
 
             System.out.println("\rSelect a cursor style to apply");
-            System.out.println("\rUse Arrow keys to navigate selection, enter to confirm and C or esc to cancel");
+            System.out.println("\rUse Arrow keys to navigate selection, enter to confirm, and C or ESC to cancel");
             System.out.println("\r");
 
             CursorStyles prev_style = AVandiniEliaBzGuessGame.cursorStyle;
@@ -1020,7 +1453,6 @@ class CommandChangeCursorStyle extends Command {
             list.add("\r ● Steady Bar ");
 
             while (loop.get() && !cancel.get()) {
-
                 for (int i = 0; i < list.size(); i++) {
                     if (seleciton.get() == i) {
                         AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
@@ -1063,17 +1495,30 @@ class CommandChangeCursorStyle extends Command {
     }
 }
 
+/**
+ * Command to enable AI to play the game for the user.
+ * Automates gameplay by simulating guesses based on a minimax strategy.
+ */
 class CommandAI extends Command {
 
+    /**
+     * Constructs a CommandAI with predefined attributes.
+     */
     CommandAI() {
         super();
         category = CommandCategory.STORE;
         longc = "ai";
         shortc = "a";
-        description = "plays the game for you";
+        description = "Plays the game for you";
         fullName = "AI";
     }
 
+    /**
+     * Executes the AI command, automating gameplay for the user.
+     * Simulates guesses until the game is won or lost.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     */
     void exec(String[] args) {
         try {
             Game g = AVandiniEliaBzGuessGame.current_game;
@@ -1148,39 +1593,64 @@ class CommandBuyAI extends Command {
     }
 }
 
+/**
+ * Command to count the remaining possible solutions based on feedback from guesses.
+ * Costs 2 attempts and updates the game history with the count.
+ */
 class CommandRemains extends Command {
 
+    /**
+     * Constructs a CommandRemains with predefined attributes.
+     */
     CommandRemains() {
         super();
         category = CommandCategory.STORE;
         longc = "remains";
         shortc = "R";
-        description = "counts available solutions based on the guesse's feedback. Costs 2 attempts";
+        description = "Counts available solutions based on the guess's feedback. Costs 2 attempts";
         fullName = "Remains";
     }
 
+    /**
+     * Executes the command to count possible solutions based on feedback from previous guesses.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     * @throws InvalidInputException if an error occurs during solution counting.
+     */
     void exec(String[] args) throws InvalidInputException {
         Game g = AVandiniEliaBzGuessGame.current_game;
         int solution_count = g.solver.reduceCodes(g.matches, g.guesses);
-        g.attempts_left--;
-        g.attempts_left--;
-        g.history += "Game counted " + solution_count + " possible solutions still available based on guess feedback. 2 attempts where used up\n";
-        String res = "\r" + "Based on past guesses feedback there are " + solution_count + " viable solutions.";
+        g.attempts_left -= 2;
+        g.history += "Game counted " + solution_count + " possible solutions still available based on guess feedback. 2 attempts were used up\n";
+        String res = "\r" + "Based on past guesses' feedback, there are " + solution_count + " viable solutions.";
         AVandiniEliaBzGuessGame.fancyprint(res);
     }
 }
 
+/**
+ * Command to grant the player (almost) unlimited attempts.
+ * This is categorized as a secret command and is primarily for debugging or cheating.
+ */
 class CommandUnlimitedAttempts extends Command {
 
+    /**
+     * Constructs a CommandUnlimitedAttempts with predefined attributes.
+     */
     CommandUnlimitedAttempts() {
         super();
         category = CommandCategory.SECRET;
         longc = "attempthack";
         shortc = "u";
-        description = "gives you (almost) unlimited attempts";
-        fullName = "Unlimited attempts";
+        description = "Gives you (almost) unlimited attempts";
+        fullName = "Unlimited Attempts";
     }
 
+    /**
+     * Executes the command to grant the player an extremely high number of attempts.
+     *
+     * @param args the arguments passed with the command (not used for this command).
+     * @throws InvalidInputException if an error occurs while processing the command.
+     */
     void exec(String[] args) throws InvalidInputException {
         Game g = AVandiniEliaBzGuessGame.current_game;
         g.attempts_left = Long.MAX_VALUE;
@@ -1188,24 +1658,28 @@ class CommandUnlimitedAttempts extends Command {
 }
 
 /**
- * Class representing a game instance.
+ * Represents a single game instance.
+ * Manages the gameplay loop, the secret code, attempts, score, and game history.
  */
 class Game implements Serializable {
-    char[] code = new char[4];
-    long attempts_left = 20L;
-    String history = "";
-    boolean won = false;
-    boolean lost = false;
-    Date start_date = new Date();
-    long score = 0;
-    Solver solver = new Solver();
-    ArrayList<Point> matches = new ArrayList<Point>();
-    ArrayList<char[]> guesses = new ArrayList<char[]>();
-    boolean ai = false;
-    char[] discovered_chars = {'_', '_', '_', '_'};
+    char[] code = new char[4]; // The secret code for the game.
+    long attempts_left = 20L; // The number of attempts the player has left.
+    String history = ""; // The history of guesses and feedback.
+    boolean won = false; // Indicates if the game is won.
+    boolean lost = false; // Indicates if the game is lost.
+    Date start_date = new Date(); // The start date of the game.
+    long score = 0; // The player's score.
+    Solver solver = new Solver(); // The solver instance for generating guesses and solutions.
+    ArrayList<Point> matches = new ArrayList<>(); // The list of feedback points for guesses.
+    ArrayList<char[]> guesses = new ArrayList<>(); // The list of guesses made by the player.
+    boolean ai = false; // Indicates if the AI is playing.
+    char[] discovered_chars = {'_', '_', '_', '_'}; // Partially discovered characters in the code.
 
-    static TextBox textBox = new TextBox();
+    TextBox textBox = new TextBox(); // The text box for player input.
 
+    /**
+     * Constructs a new Game instance with a randomly generated secret code.
+     */
     public Game() {
         Random r = new Random();
         for (int i = 0; i < 4; i++) {
@@ -1214,7 +1688,7 @@ class Game implements Serializable {
     }
 
     /**
-     * Starts the game.
+     * Starts the game by initializing history and entering the game loop.
      */
     void startGame() {
         this.history = "Game started at " + start_date + '\n';
@@ -1222,7 +1696,9 @@ class Game implements Serializable {
     }
 
     /**
-     * Main game loop.
+     * Executes the main game loop.
+     * Continuously processes player turns until the game is won or lost.
+     * Saves the game state after each turn.
      */
     void gameloop() {
         while (!lost && !won) {
@@ -1230,14 +1706,15 @@ class Game implements Serializable {
             execeTurn();
             AVandiniEliaBzGuessGame.saveGameState();
             if (AVandiniEliaBzGuessGame.current_game != this) {
-                return;
+                return; // Exit loop if the current game has changed.
             }
         }
         finishGame();
     }
 
     /**
-     * Executes a turn in the game.
+     * Executes a single turn in the game.
+     * Parses player input and checks if the game has been lost due to running out of attempts.
      */
     void execeTurn() {
         parseInput();
@@ -1247,25 +1724,24 @@ class Game implements Serializable {
     }
 
     /**
-     * Asks for user input.
+     * Prompts the player for input and returns the entered string.
      *
-     * @return the input from the user
+     * @return the player's input.
      */
     String askInput() {
         Scanner sc = new Scanner(System.in);
         AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
         System.out.print(attempts_left + ">");
         AVandiniEliaBzGuessGame.resetAttrributes();
-        String inp = sc.nextLine();
-        return inp;
+        return sc.nextLine();
     }
 
     /**
-     * Parses the command input.
+     * Parses a command entered by the player and executes it.
      *
-     * @param input the input string
-     * @param args  arguments for the command
-     * @throws InvalidInputException if the command is unknown
+     * @param input the command to parse.
+     * @param args  the arguments for the command.
+     * @throws InvalidInputException if the command is invalid or unknown.
      */
     void parseCommand(String input, String[] args) throws InvalidInputException {
         for (Command command : AVandiniEliaBzGuessGame.comands) {
@@ -1279,7 +1755,8 @@ class Game implements Serializable {
     }
 
     /**
-     * Parses user input.
+     * Parses player input and determines whether it's a command or a guess.
+     * Handles validation and feedback for guesses.
      */
     void parseInput() {
         String input = "";
@@ -1289,7 +1766,7 @@ class Game implements Serializable {
                 return;
             }
             if (input.isEmpty()) {
-                throw new InvalidInputException("please input a command or 4 character sequence");
+                throw new InvalidInputException("Please input a command or a 4-character sequence");
             }
             if (input.charAt(0) == '.') {
                 String temp = input.substring(1);
@@ -1298,14 +1775,13 @@ class Game implements Serializable {
                 return;
             }
             if (input.length() != 4) {
-                throw new InvalidInputException("input must be 4 characters long");
+                throw new InvalidInputException("Input must be 4 characters long");
             }
             if (input.matches(".*[^ABCDEFabcdef].*")) {
-                throw new InvalidInputException("input must consist of A, B, C, D, E or F");
+                throw new InvalidInputException("Input must consist of A, B, C, D, E, or F");
             }
 //            AVandiniEliaBzGuessGame.eraseLine();
             AVandiniEliaBzGuessGame.eraseLinesUp(1);
-
             AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
             System.out.print("\r" + attempts_left + "> ");
             AVandiniEliaBzGuessGame.resetAttrributes();
@@ -1315,56 +1791,67 @@ class Game implements Serializable {
                 lost = true;
             }
         } catch (InvalidInputException e) {
-            AVandiniEliaBzGuessGame.eraseLinesUp(1);
-            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
-            AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
-            System.out.print(e.getMessage());
-            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.RESET);
-
-            long start = System.currentTimeMillis();
-            long last_tick = System.currentTimeMillis();
-
-            AVandiniEliaBzGuessGame.hideCursor();
-
-            while (System.currentTimeMillis() < start + 3000) {
-                if (System.currentTimeMillis() < last_tick + 1) {
-                    continue;
-                }
-                last_tick = System.currentTimeMillis();
-                if (!KeyListenenThread.active_keys.isEmpty()) {
-                    break;
-                }
-                AVandiniEliaBzGuessGame.eraseLine();
-
-                AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
-                System.out.print(attempts_left + "> ");
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.UNDERLINE);
-                System.out.print(input);
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                if (System.currentTimeMillis() % 1000 < 500) {
-                    AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
-                }
-                AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
-                System.out.print(" " + e.getMessage());
-                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.RESET);
-            }
-            AVandiniEliaBzGuessGame.showCursor();
-            parseInput();
+            handleInputError(input, e);
         }
     }
 
     /**
-     * Parses the player's guess.
+     * Handles errors during input parsing, providing feedback to the player.
      *
-     * @param input the player's input
-     * @return the result of the guess
+     * @param input the invalid input provided by the player.
+     * @param e     the exception containing the error message.
+     */
+    private void handleInputError(String input, InvalidInputException e) {
+        AVandiniEliaBzGuessGame.eraseLinesUp(1);
+        AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
+        AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
+        System.out.print(e.getMessage());
+        AVandiniEliaBzGuessGame.setAttribute(TextAttributes.RESET);
+
+        long start = System.currentTimeMillis();
+        long last_tick = System.currentTimeMillis();
+
+        AVandiniEliaBzGuessGame.hideCursor();
+
+        while (System.currentTimeMillis() < start + 3000) {
+            if (System.currentTimeMillis() < last_tick + 1) {
+                continue;
+            }
+            last_tick = System.currentTimeMillis();
+            if (!KeyListenenThread.active_keys.isEmpty()) {
+                break;
+            }
+            AVandiniEliaBzGuessGame.eraseLine();
+
+            AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
+            System.out.print(attempts_left + "> ");
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.UNDERLINE);
+            System.out.print(input);
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            if (System.currentTimeMillis() % 1000 < 500) {
+                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
+            }
+            AVandiniEliaBzGuessGame.setAttribute(FColors.RED);
+            System.out.print(" " + e.getMessage());
+            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.RESET);
+        }
+        AVandiniEliaBzGuessGame.showCursor();
+        parseInput();
+    }
+
+    /**
+     * Parses a player's guess and provides feedback in the form of X (correct position)
+     * and - (correct character, wrong position). Updates the game's history.
+     *
+     * @param input the player's guess.
+     * @return a string representing the feedback.
      */
     String parseGuess(String input) {
         Point p = checkGuess(code, input.toCharArray());
         StringBuilder result = new StringBuilder();
-        result.append("X".repeat(max(0, p.x)));
-        result.append("-".repeat(max(0, p.y)));
+        result.append("X".repeat(p.x));
+        result.append("-".repeat(p.y));
         matches.add(p);
         guesses.add(input.toCharArray());
         if (p.x >= 4) {
@@ -1374,11 +1861,19 @@ class Game implements Serializable {
         return result.toString();
     }
 
-    static Point checkGuess(char[] code, char[] input) {
+    /**
+     * Compares a guess against the secret code and determines feedback.
+     * Feedback is provided in terms of the number of exact matches (X) and partial matches (-).
+     *
+     * @param code  the secret code.
+     * @param guess the player's guess.
+     * @return a Point object where `x` represents exact matches and `y` represents partial matches.
+     */
+    static Point checkGuess(char[] code, char[] guess) {
         Point p = new Point(0, 0);
         boolean[] cleared = {false, false, false, false};
         for (int j = 0; j < 4; j++) {
-            if (code[j] == Character.toUpperCase(input[j])) {
+            if (code[j] == Character.toUpperCase(guess[j])) {
                 cleared[j] = true;
                 p.x++;
             }
@@ -1388,7 +1883,7 @@ class Game implements Serializable {
                 if (cleared[k] || cleared[j]) {
                     continue;
                 }
-                if (code[k] == Character.toUpperCase(input[j])) {
+                if (code[k] == Character.toUpperCase(guess[j])) {
                     p.y++;
                 }
             }
@@ -1404,6 +1899,8 @@ class Game implements Serializable {
      * @return the calculated score
      */
     static long score_calc(long time, long attempts_left) {
+
+        // prevents absurd scores when using cheat commands
         if (attempts_left > 19
         ) {
             attempts_left = 19;
@@ -1417,7 +1914,8 @@ class Game implements Serializable {
     }
 
     /**
-     * Finishes the game and determines win/lose status.
+     * Finalizes the game by saving the game state and displaying results.
+     * Prompts the player with a win or lose screen based on the game outcome.
      */
     void finishGame() {
         if (won) {
@@ -1443,13 +1941,29 @@ class Game implements Serializable {
     }
 }
 
+/**
+ * Represents a solver for the game, implementing logic to minimize
+ * the number of guesses needed to identify a secret code.
+ */
 class Solver implements Serializable {
+
+    /**
+     * List of all possible codes that can be generated in the game.
+     */
     ArrayList<char[]> possibleCodes;
 
+    /**
+     * Constructor for the Solver class. Initializes the possible codes.
+     */
     Solver() {
         possibleCodes = getPopulateCodes();
     }
 
+    /**
+     * Generates all possible unique codes using the predefined game options.
+     *
+     * @return An ArrayList containing all possible combinations of game codes.
+     */
     static ArrayList<char[]> getPopulateCodes() {
         ArrayList<char[]> genCodes = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
@@ -1474,6 +1988,14 @@ class Solver implements Serializable {
         return genCodes;
     }
 
+    /**
+     * Simulates the game using a given code and guesses, returning the results
+     * for each guess.
+     *
+     * @param code    The secret code to be guessed.
+     * @param guesses A list of guesses to be evaluated.
+     * @return An ArrayList of results (as Points) for each guess.
+     */
     static ArrayList<Point> mockGame(char[] code, ArrayList<char[]> guesses) {
         ArrayList<Point> res = new ArrayList<Point>();
         for (int i = 0; i < guesses.size(); i++) {
@@ -1482,12 +2004,28 @@ class Solver implements Serializable {
         return res;
     }
 
+    /**
+     * Compares match results between two games to check for consistency.
+     *
+     * @param code    The secret code to be checked.
+     * @param p1      The first list of match results to compare.
+     * @param guesses The list of guesses used in the comparison.
+     * @return True if the matches are not equal, false otherwise.
+     */
     static boolean equalMatches(char[] code, ArrayList<Point> p1, ArrayList<char[]> guesses) {
         ArrayList<Point> p2 = mockGame(code, guesses);
         boolean res = p1.equals(p2);
         return !res;
     }
 
+    /**
+     * Reduces the set of possible codes based on match results and guesses.
+     *
+     * @param matches The list of match results.
+     * @param guesses The list of guesses corresponding to the matches.
+     * @return The size of the remaining possible codes.
+     * @throws InvalidInputException If the size of matches and guesses differ.
+     */
     int reduceCodes(ArrayList<Point> matches, ArrayList<char[]> guesses) throws InvalidInputException {
         if (matches.size() != guesses.size()) {
             throw new InvalidInputException("param size mismatch");
@@ -1500,7 +2038,17 @@ class Solver implements Serializable {
         return possibleCodes.size();
     }
 
+    /**
+     * Determines the best guess using the minimax strategy.
+     * This code is based on <a href="https://en.wikipedia.org/wiki/Mastermind_(board_game)#Worst_case:_Five-guess_algorithm">Donald Knuth's algorithm for codebreaking mastermind</a>
+     *
+     * @param matches The list of match results.
+     * @param guesses The list of previous guesses.
+     * @return The best guess as a character array.
+     * @throws InvalidInputException If the size of matches and guesses differ.
+     */
     char[] minimaxBestGuess(ArrayList<Point> matches, ArrayList<char[]> guesses) throws InvalidInputException {
+//        System.out.println("\r" + possibleCodes.size());
         if (matches.size() != guesses.size()) {
             throw new InvalidInputException("param size mismatch");
         }
@@ -1532,11 +2080,20 @@ class Solver implements Serializable {
                 }
             }
         }
+//        System.out.println("\r" + possibleCodes.size());
         return lowest_worst_score_code;
     }
 }
 
+/**
+ * Represents a collection of key codes and their variations for different key modifiers (e.g., Shift, Ctrl, Alt).
+ * More specifically these byte arrays are read from the input stream when a key is pressed with raw terminal mode enabled
+ * This listis not exhaustive and only includes keybinds i am interested in implementing in my program
+ * many keycodes are for the same reason equale regardless of the modifyer
+ * finally ctrl+shift keybinds are not listed because of technical limitations
+ */
 enum KeyCodes {
+
     BACKSPACE(new byte[]{127}, new byte[]{127}, new byte[]{8}, new byte[]{27, 127}, new byte[]{27, 127}),
     TAB(new byte[]{9}, new byte[]{27, 91}, new byte[]{9}, new byte[]{9}, new byte[]{9}),
     ENTER(new byte[]{13}, new byte[]{13}, new byte[]{13}, new byte[]{27, 13}, new byte[]{27, 13}),
@@ -1619,11 +2176,36 @@ enum KeyCodes {
 //    SINGLE_QUOTE(new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{}, new byte[]{});
 
     private final byte[] code;
+
+    /**
+     * Byte representation of the key when the Shift modifier is applied.
+     */
     private final byte[] shiftCode;
+
+    /**
+     * Byte representation of the key when the Ctrl modifier is applied.
+     */
     private final byte[] ctrlCode;
+
+    /**
+     * Byte representation of the key when the Alt modifier is applied.
+     */
     private final byte[] altCode;
+
+    /**
+     * Byte representation of the key when both Alt and Shift modifiers are applied.
+     */
     private final byte[] altShiftCode;
 
+    /**
+     * Constructor for the KeyCodes enum.
+     *
+     * @param code         Byte array representing the key without modifiers.
+     * @param shiftCode    Byte array representing the key with the Shift modifier.
+     * @param ctrlCode     Byte array representing the key with the Ctrl modifier.
+     * @param altCode      Byte array representing the key with the Alt modifier.
+     * @param altShiftCode Byte array representing the key with both Alt and Shift modifiers.
+     */
     KeyCodes(byte[] code, byte[] shiftCode, byte[] ctrlCode, byte[] altCode, byte[] altShiftCode) {
         this.code = code;
         this.shiftCode = shiftCode;
@@ -1632,27 +2214,55 @@ enum KeyCodes {
         this.altShiftCode = altShiftCode;
     }
 
+    /**
+     * Retrieves the byte array representation of the key without modifiers.
+     *
+     * @return A byte array representing the key.
+     */
     public byte[] getCode() {
         return code;
     }
 
+    /**
+     * Retrieves the byte array representation of the key with the Shift modifier.
+     *
+     * @return A byte array representing the key with the Shift modifier.
+     */
     public byte[] getShiftCode() {
         return shiftCode;
     }
 
+    /**
+     * Retrieves the byte array representation of the key with the Ctrl modifier.
+     *
+     * @return A byte array representing the key with the Ctrl modifier.
+     */
     public byte[] getCtrlCode() {
         return ctrlCode;
     }
 
+    /**
+     * Retrieves the byte array representation of the key with the Alt modifier.
+     *
+     * @return A byte array representing the key with the Alt modifier.
+     */
     public byte[] getAltCode() {
         return altCode;
     }
 
+    /**
+     * Retrieves the byte array representation of the key with both Alt and Shift modifiers.
+     *
+     * @return A byte array representing the key with both Alt and Shift modifiers.
+     */
     public byte[] getAltShiftCode() {
         return altShiftCode;
     }
 }
 
+/*
+ * Represents different keymodifyers.
+ */
 enum KeyModifier {
     NONE,
     SHIFT,
@@ -1661,14 +2271,37 @@ enum KeyModifier {
     ALT_SHIFT;
 }
 
+/**
+ * A thread responsible for handling low-level key listening and processing.
+ * It captures raw key inputs and invokes associated key bindings.
+ */
 class KeyListenenThread extends Thread {
 
+    /**
+     * Indicates whether the thread is actively running.
+     */
     static boolean running = false;
+
+    /**
+     * Determines if global key handling is enabled.
+     */
     static boolean globalKeyHandling = true;
 
+    /**
+     * A queue of currently active keys captured by the thread.
+     * They will remain in the queue until properly handled and removed
+     */
     static Queue<byte[]> active_keys = new LinkedList<>();
+
+    /**
+     * A mapping of keycodes sequences to their corresponding key handling actions.
+     */
     static Map<byte[], Consumer<byte[]>> keymap = new Hashtable<>();
 
+    /**
+     * The main execution loop of the thread, responsible for listening to key inputs
+     * and invoking appropriate handlers.
+     */
     public void run() {
 
         try {
@@ -1765,21 +2398,39 @@ class KeyListenenThread extends Thread {
         running = false;
     }
 
+    /**
+     * Enables raw input mode in the terminal, disabling local echo and input buffering.
+     *
+     * @throws IOException If an error occurs while executing the system command.
+     */
     static void enableRawMode() throws IOException {
         String[] command = {"/bin/sh", "-c", "stty raw -echo < /dev/tty"};
         Runtime.getRuntime().exec(command);
     }
 
+    /**
+     * Enables raw input mode while preserving local echo in the terminal.
+     *
+     * @throws IOException If an error occurs while executing the system command.
+     */
     static void enableRawEchoMode() throws IOException {
         String[] command = {"/bin/sh", "-c", "stty raw < /dev/tty"};
         Runtime.getRuntime().exec(command);
     }
 
+    /**
+     * Disables raw input mode in the terminal, restoring normal input handling.
+     *
+     * @throws IOException If an error occurs while executing the system command.
+     */
     static void disableRawMode() throws IOException {
         String[] command = {"/bin/sh", "-c", "stty cooked echo < /dev/tty"};
         Runtime.getRuntime().exec(command);
     }
 
+    /**
+     * Handles globally defined key bindings and invokes the corresponding actions.
+     */
     public void GlobalKeyHandling() {
         ArrayList<byte[]> toRemove = new ArrayList<>();
 //        System.out.print(Arrays.toString(active_keys.peek()));
@@ -1799,24 +2450,63 @@ class KeyListenenThread extends Thread {
         KeyListenenThread.active_keys.removeAll(toRemove);
     }
 
+    /**
+     * Determines whether a character is printable.
+     *
+     * @param d The character to evaluate.
+     * @return True if the character is printable, false otherwise.
+     */
     static boolean printable(char d) {
-        if ((d > 31 && d < 128) || (d > 160)) {
-            return true;
-        }
-        return false;
+        return (d > 31 && d < 128) || (d > 160);
     }
 }
 
+/**
+ * Represents a text box with features for text manipulation, cursor movement,
+ * and command mode operations. Handles user input and history cycling.
+ */
 class TextBox implements Serializable {
 
+    /**
+     * The main text content of the text box.
+     */
     StringBuilder text = new StringBuilder();
+
+    /**
+     * The current cursor position in the text.
+     */
     int cursor_pos = 0;
-    Point selection_pos = new Point(-1, -1);
+
+    /**
+     * Represents the selection range in the text.
+     * `x` and `y` indicate the start and end positions of the selection.
+     */
+    Point selection_pos = new Point(0, 0);
+
+    /**
+     * Indicates whether the text box is in command mode.
+     */
     boolean command_mode = true;
+
+    /**
+     * A history of previously entered commands.
+     */
     static ArrayList<String> command_history = new ArrayList<>();
+
+    /**
+     * The index of the current command in the history.
+     * Is used to cycle previously entered guesses without having to open the game history
+     */
     static int history_index = 0;
+
+    /**
+     * The result of the current input operation.
+     */
     String result;
 
+    /**
+     * Configures the default key mappings for basic text input.
+     */
     void set_base_keymap() {
         KeyListenenThread.keymap.clear();
 //        KeyListenenThread.keymap.put(KeyCodes.ESCAPE.getCode())
@@ -1914,16 +2604,25 @@ class TextBox implements Serializable {
 
     }
 
+    /**
+     * Configures key mappings specific to "guess mode."
+     */
     void set_guess_mode_keymap() {
         set_base_keymap();
     }
 
+    /**
+     * Configures key mappings specific to "command mode."
+     */
     void set_comand_mode_keymap() {
         set_base_keymap();
         KeyListenenThread.keymap.put(KeyCodes.SUBTRACT.getCode(), n -> insert("-"));
         KeyListenenThread.keymap.put(KeyCodes.SPACE.getCode(), n -> insert(" "));
     }
 
+    /**
+     * Submits the current input text and resets the text box.
+     */
     void submit() {
         result = text.toString();
         command_history.set(0, text.toString());
@@ -1934,6 +2633,9 @@ class TextBox implements Serializable {
         System.out.println();
     }
 
+    /**
+     * Cycles to the previous command in the history.
+     */
     void cycle_history_up() {
         if (command_history.isEmpty()) {
             return;
@@ -1952,6 +2654,9 @@ class TextBox implements Serializable {
         cursor_pos = text.length();
     }
 
+    /**
+     * Cycles to the next command in the history.
+     */
     void cycle_history_down() {
         if (command_history.isEmpty()) {
             return;
@@ -1967,6 +2672,9 @@ class TextBox implements Serializable {
         cursor_pos = text.length();
     }
 
+    /**
+     * Jumps to the oldest command in the history.
+     */
     void cycle_history_top() {
         if (command_history.isEmpty()) {
             return;
@@ -1979,6 +2687,9 @@ class TextBox implements Serializable {
         cursor_pos = text.length();
     }
 
+    /**
+     * Jumps to the newest command in the history.
+     */
     void cycle_history_bottom() {
         if (command_history.isEmpty()) {
             return;
@@ -1988,7 +2699,14 @@ class TextBox implements Serializable {
         cursor_pos = text.length();
     }
 
-    int findWordEndToRight(String input, int start_pos) {
+    /**
+     * Finds the position of the end of the next word to the right.
+     *
+     * @param input     The input text.
+     * @param start_pos The starting position for the search.
+     * @return The position of the end of the next word.
+     */
+    static int findWordEndToRight(String input, int start_pos) {
         if (input == null || input.isEmpty()) {
             return 0;
         }
@@ -2008,7 +2726,14 @@ class TextBox implements Serializable {
         return i;
     }
 
-    int findWordStartToLeft(String input, int start_pos) {
+    /**
+     * Finds the position of the start of the previous word to the left.
+     *
+     * @param input     The input text.
+     * @param start_pos The starting position for the search.
+     * @return The position of the start of the previous word.
+     */
+    static int findWordStartToLeft(String input, int start_pos) {
         if (input == null || input.isEmpty()) {
             return 0;
         }
@@ -2028,6 +2753,12 @@ class TextBox implements Serializable {
         return i + 1;
     }
 
+    /**
+     * Moves the cursor within the text, optionally updating the selection range.
+     *
+     * @param modifier The key modifier affecting cursor movement.
+     * @param pos      The direction and amount of movement (-1 for left, +1 for right).
+     */
     void move_cursor(KeyModifier modifier, int pos) {
         if (modifier == KeyModifier.ALT) {
             if (pos < 0) {
@@ -2046,6 +2777,7 @@ class TextBox implements Serializable {
         if (modifier == KeyModifier.SHIFT || modifier == KeyModifier.NONE) {
             cursor_pos += pos;
         }
+
         if (modifier == KeyModifier.SHIFT || modifier == KeyModifier.ALT_SHIFT) {
             selection_pos.y = cursor_pos;
         } else {
@@ -2054,6 +2786,12 @@ class TextBox implements Serializable {
         }
     }
 
+    /**
+     * Deletes text from the text box based on the cursor and selection positions.
+     *
+     * @param modifier  The key modifier affecting the deletion behavior.
+     * @param backspace True if backspace behavior is applied, false for forward delete.
+     */
     void delete(KeyModifier modifier, boolean backspace) {
         if (selection_pos.x < selection_pos.y) {
             text.delete(selection_pos.x, selection_pos.y);
@@ -2081,6 +2819,11 @@ class TextBox implements Serializable {
         }
     }
 
+    /**
+     * Inserts a string at the current cursor position.
+     *
+     * @param s The string to be inserted.
+     */
     void insert(String s) {
         text.insert(cursor_pos, s);
         cursor_pos += s.length();
@@ -2088,6 +2831,9 @@ class TextBox implements Serializable {
         validate_selection_pos();
     }
 
+    /**
+     * Ensures the cursor position is within valid bounds.
+     */
     void validate_cursor_pos() {
         if (cursor_pos > text.length()) {
             cursor_pos = text.length();
@@ -2097,6 +2843,9 @@ class TextBox implements Serializable {
         }
     }
 
+    /**
+     * Ensures the selection position is within valid bounds.
+     */
     void validate_selection_pos() {
         if (selection_pos.x > text.length()) {
             selection_pos.x = text.length();
@@ -2104,16 +2853,17 @@ class TextBox implements Serializable {
         if (selection_pos.x < 0) {
             selection_pos.x = 0;
         }
-
-        if (selection_pos.y > text.length()) {
-            selection_pos.y = text.length();
-        }
-        if (selection_pos.y < 0) {
-            selection_pos.y = 0;
-        }
     }
 
-    char getCharSafely(StringBuilder sb, int index, char fallback) {
+    /**
+     * Safely retrieves a character from a StringBuilder, with a fallback value.
+     *
+     * @param sb       The StringBuilder to retrieve the character from.
+     * @param index    The index of the character.
+     * @param fallback The fallback character if the index is out of bounds.
+     * @return The character at the given index, or the fallback value.
+     */
+    static char getCharSafely(StringBuilder sb, int index, char fallback) {
         if (index >= 0 && index < sb.length()) {
             return sb.charAt(index);
         } else {
@@ -2121,6 +2871,13 @@ class TextBox implements Serializable {
         }
     }
 
+    /**
+     * Retrieves user input while interacting with a parent game instance.
+     * Basically the whole point of this big ahh class
+     *
+     * @param parent The parent game instance interacting with the text box.
+     * @return The user input as a string.
+     */
     String get_input(Game parent) {
         result = "";
 
@@ -2150,6 +2907,7 @@ class TextBox implements Serializable {
                 }
                 return result;
             }
+
             if (getCharSafely(text, 0, ' ') == '.' && !command_mode) {
                 command_mode = true;
                 set_comand_mode_keymap();
