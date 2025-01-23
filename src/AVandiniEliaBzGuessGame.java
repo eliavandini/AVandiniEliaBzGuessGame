@@ -22,10 +22,32 @@
  * SOFTWARE.
  */
 
-/*
- Dear Reader,
- This code is part of a 
+// check this project out at https://github.com/eliavandini/AVandiniEliaBzGuessGame/
 
+
+/*
+ * Dear Reader,
+ * The following game was developed form december 2024 to february 2025.
+ * It is a assignment from the course Intro to Programming at the Free University Bolzano/Boxen.
+ * While the assignment itself was very straightforward and could have been completed
+ * in less than a few hundred lines of code, I decided to challenge myself and program
+ * something i could learn from and improve my java skills.
+ *
+ * Some goals i had in mind:
+ *    - make use of ANSII escape codes
+ *    - make use of inheritance (which was not discussed in the course)
+ *    - Object oriented system for commands with arguments and dynamic help screen.
+ *    - write a program that solves the game.
+ *    - make the UI aesthetically pleasing
+ *    - ditch the cooked terminal mode and take it raw
+ *    - add dark fantasy adventurer lore for game immersion
+ *    - use threads
+ *
+ * I was not able to complete every objective but still consider this a successful project
+ * In the end i had a lot of fun and learned that the real treasure was the bugs i found along the way.
+ * FWM life, can't wait to drop this project and work on something that pays the bills.
+ *
+ * E.V.
  */
 
 import java.io.*;
@@ -36,6 +58,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static java.lang.Math.*;
+
+/*
+ * Brief code explaination!!1!11!1!!
+ *
+ * AVandiniEliaBzGuessGame is the main class. it holds stuff such as highscore, list of commands,
+ * list of keybindings and lots of miscellaneous logic as well as the main method.
+ * The Game class represents a game, running or finished. while it is running it parses guesses,
+ * executed commands if requested all in cycles of turns.
+ * At the beginning of each turn the TextBox class will query the user for a console input.
+ * All of the fancy UI shenanigans are based in this class and synthesised through
+ * elaborate and finely crafted ANSII escape code magic.
+ * It also listens for keybinds enabling a very smooth and natural navigation of the user input.
+ * The keybind handling itself is only possible through the KeyListenThread which runs parallel to every other process.
+ * Everything else is pretty selfexplanatorily or explained in the comments
+ */
+
 
 /**
  * Represents different categories of commands available in the game.
@@ -302,14 +340,14 @@ class InvalidInputException extends Exception {
  * Typically used for storing feedback values (x, y) for guesses.
  */
 class Point implements Serializable {
-    int x; // x-coordinate, representing correct characters in the correct position.
-    int y; // y-coordinate, representing correct characters in the wrong position.
+    public int x; // x-coordinate
+    public int y; // y-coordinate
 
     /**
      * Constructs a Point with specified x and y values.
      *
-     * @param x the x-coordinate.
-     * @param y the y-coordinate.
+     * @param x the x-coordinate
+     * @param y the y-coordinate
      */
     public Point(int x, int y) {
         this.x = x;
@@ -317,10 +355,41 @@ class Point implements Serializable {
     }
 
     /**
-     * Constructs a default Point with x and y initialized to 0.
+     * Generates a string representation of the point in a readable format.
+     *
+     * @return the string representation of the point in the format [x=value, y=value].
      */
-    public Point() {
-        this(0, 0);
+    @Override
+    public String toString() {
+        return "[x=" + this.x + ",y=" + this.y + "]";
+    }
+
+    /**
+     * Checks whether this Point is equal to another object.
+     * Two Points are considered equal if their x and y values are the same.
+     *
+     * @param obj the object to compare against.
+     * @return {@code true} if the object is a Point with the same x and y values,
+     * {@code false} otherwise.
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Point pt)) {
+            return super.equals(obj);
+        } else {
+            return this.x == pt.x && this.y == pt.y;
+        }
+    }
+
+    /**
+     * Generates a hash code for this Point.
+     * Ensures consistency between equals and hashCode methods.
+     *
+     * @return the hash code value for this Point.
+     */
+    @Override
+    public int hashCode() {
+        return 31 * x + y; // Combines x and y into a single hash code. Any prime number would work as multiplicand.
     }
 }
 
@@ -638,6 +707,25 @@ class AVandiniEliaBzGuessGame {
     }
 
     /**
+     * Sets a 8 bit color in foreground.
+     *
+     * @param color the color to set.
+     */
+    static void set8bitForeground(int color) {
+        System.out.printf("\u001b[38;5;%dm", color);
+    }
+
+    /**
+     * Sets a 8 bit color in background.
+     *
+     * @param color the color to set.
+     */
+    static void set8bitBackground(int color) {
+        System.out.printf("\u001b[48;5;%dm", color);
+    }
+
+
+    /**
      * Resets all text attributes in the terminal to default.
      */
     static void resetAttrributes() {
@@ -889,13 +977,15 @@ class CommandHelp extends Command {
         if (args.length > 0 && args[0].equals("-s")) {
             show_secret = true;
         }
-        String space_storage = "                 ";
+        String space_storage = "                  ";
 
         for (CommandCategory c : CommandCategory.values()) {
             if (c == CommandCategory.SECRET && !show_secret) {
                 continue;
             }
+            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.BRIGHT);
             System.out.println("\n\r" + c.toString().toUpperCase());
+            AVandiniEliaBzGuessGame.resetAttrributes();
             for (Command command : AVandiniEliaBzGuessGame.comands) {
                 if (c != command.category) {
                     continue;
@@ -934,9 +1024,11 @@ class CommandKeybinds extends Command {
      * @param args the arguments passed with the command (not used for this command).
      */
     void exec(String[] args) {
-        String space_storage = "                 ";
-
-        System.out.println("\r ^X stands for the ctrl modifyer (eg. ^C is ctrl+C");
+        String space_storage = "         ";
+        AVandiniEliaBzGuessGame.set8bitForeground(241);
+        System.out.println();
+        System.out.println("\r ^X stands for the ctrl modifyer (eg. ^C is ctrl+C)");
+        AVandiniEliaBzGuessGame.resetAttrributes();
         System.out.println();
         for (KeyBind keyBind : AVandiniEliaBzGuessGame.global_keybinds) {
             String help_string = "\r    " + keyBind.shortel;
@@ -944,8 +1036,10 @@ class CommandKeybinds extends Command {
             System.out.println(help_string);
         }
         System.out.println();
+        AVandiniEliaBzGuessGame.set8bitForeground(241);
         System.out.println("\rYou can also use the arrow combined with alt and/or shift to move around the input bar."
                 + "\n\rThe up and down arrow keys will let you cycle your input history");
+        AVandiniEliaBzGuessGame.resetAttrributes();
     }
 }
 
@@ -1639,7 +1733,7 @@ class CommandUnlimitedAttempts extends Command {
     CommandUnlimitedAttempts() {
         super();
         category = CommandCategory.SECRET;
-        longc = "attempthack";
+        longc = "unlimited";
         shortc = "u";
         description = "Gives you (almost) unlimited attempts";
         fullName = "Unlimited Attempts";
@@ -2601,6 +2695,7 @@ class TextBox implements Serializable {
         KeyListenenThread.keymap.put(KeyCodes.X.getShiftCode(), n -> insert("X"));
         KeyListenenThread.keymap.put(KeyCodes.Y.getShiftCode(), n -> insert("Y"));
         KeyListenenThread.keymap.put(KeyCodes.Z.getShiftCode(), n -> insert("Z"));
+        KeyListenenThread.keymap.put(KeyCodes.TAB.getCode(), n -> insert(get_command_suggestion()));
 
     }
 
@@ -2624,6 +2719,7 @@ class TextBox implements Serializable {
      * Submits the current input text and resets the text box.
      */
     void submit() {
+        fancy_ui_printer(AVandiniEliaBzGuessGame.current_game.attempts_left, true);
         result = text.toString();
         command_history.set(0, text.toString());
         history_index = 0;
@@ -2872,6 +2968,71 @@ class TextBox implements Serializable {
     }
 
     /**
+     * Provides a command suggestion based on the current text input.
+     * the suggestion is then printed next to the user input in gray
+     *
+     * @return A string representing the suggested command completion or an empty string
+     * if no suggestion is applicable.
+     * - Returns ".help" if the text is empty.
+     * - Returns an empty string if the input does not start with a period (`.`) or if no matching command is found.
+     */
+    String get_command_suggestion() {
+        if (text.isEmpty()) {
+            return ".help";
+        }
+        if (text.charAt(0) != '.') {
+            return "";
+        }
+        String t = text.substring(1, text.length());
+        for (Command command : AVandiniEliaBzGuessGame.comands) {
+            if (command.longc.length() > t.length() && t.equals(command.longc.substring(0, t.length()))) {
+                return command.longc.substring(t.length());
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Displays the game's fancy user interface for the input prompt. Wow very fancy and aestheticspilled!
+     *
+     * @param attempts_left      The number of attempts remaining for the player.
+     * @param disable_suggestion A flag indicating whether command suggestions should be disabled.
+     */
+    void fancy_ui_printer(long attempts_left, boolean disable_suggestion) {
+
+        AVandiniEliaBzGuessGame.eraseLine();
+        AVandiniEliaBzGuessGame.resetAttrributes();
+        AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
+        System.out.print(attempts_left + "> ");
+        AVandiniEliaBzGuessGame.resetAttrributes();
+        String to_display = text.toString();
+        if (!command_mode) {
+            to_display = to_display.toUpperCase();
+        }
+        System.out.print(to_display);
+        int box_offset = String.valueOf(attempts_left).length() + 3;
+        String cmd_suggestion = get_command_suggestion();
+        if (!disable_suggestion && !cmd_suggestion.isEmpty() && (command_mode || text.isEmpty())) {
+            AVandiniEliaBzGuessGame.set8bitForeground(241);
+            System.out.print(cmd_suggestion);
+            AVandiniEliaBzGuessGame.resetAttrributes();
+        }
+        if (selection_pos.x != selection_pos.y) {
+//                System.out.print(selection_pos.x + " != " + selection_pos.y);
+            AVandiniEliaBzGuessGame.moveCursor(min(selection_pos.x, selection_pos.y) + box_offset, CursorMoveDirection.COLUMN);
+            AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
+            System.out.print(to_display.substring(min(selection_pos.x, selection_pos.y), max(selection_pos.x, selection_pos.y)));
+            AVandiniEliaBzGuessGame.resetAttrributes();
+            AVandiniEliaBzGuessGame.moveCursor(to_display.length() + box_offset, CursorMoveDirection.COLUMN);
+        }
+        AVandiniEliaBzGuessGame.resetAttrributes();
+        System.out.print(" ");
+//            System.out.print(command_history);
+
+        AVandiniEliaBzGuessGame.moveCursor(box_offset + cursor_pos, CursorMoveDirection.COLUMN);
+    }
+
+    /**
      * Retrieves user input while interacting with a parent game instance.
      * Basically the whole point of this big ahh class
      *
@@ -2891,7 +3052,7 @@ class TextBox implements Serializable {
         }
 
         while (!parent.lost && !parent.won && !parent.ai && AVandiniEliaBzGuessGame.current_game == parent) {
-            if (System.currentTimeMillis() < last_tick + 1) {
+            if (System.currentTimeMillis() < last_tick + 2) {
                 continue;
             }
             last_tick = System.currentTimeMillis();
@@ -2915,31 +3076,7 @@ class TextBox implements Serializable {
                 command_mode = false;
                 set_guess_mode_keymap();
             }
-
-            AVandiniEliaBzGuessGame.eraseLine();
-            AVandiniEliaBzGuessGame.resetAttrributes();
-            AVandiniEliaBzGuessGame.setAttribute(new AbstarctAttributes[]{FColors.GREEN, TextAttributes.BRIGHT});
-            System.out.print(parent.attempts_left + "> ");
-            AVandiniEliaBzGuessGame.resetAttrributes();
-            String to_display = text.toString();
-            if (!command_mode) {
-                to_display = to_display.toUpperCase();
-            }
-            System.out.print(to_display);
-            int box_offset = String.valueOf(parent.attempts_left).length() + 3;
-            if (selection_pos.x != selection_pos.y) {
-//                System.out.print(selection_pos.x + " != " + selection_pos.y);
-                AVandiniEliaBzGuessGame.moveCursor(min(selection_pos.x, selection_pos.y) + box_offset, CursorMoveDirection.COLUMN);
-                AVandiniEliaBzGuessGame.setAttribute(TextAttributes.INVERSE);
-                System.out.print(to_display.substring(min(selection_pos.x, selection_pos.y), max(selection_pos.x, selection_pos.y)));
-                AVandiniEliaBzGuessGame.resetAttrributes();
-                AVandiniEliaBzGuessGame.moveCursor(to_display.length() + box_offset, CursorMoveDirection.COLUMN);
-            }
-            AVandiniEliaBzGuessGame.resetAttrributes();
-            System.out.print(" ");
-//            System.out.print(command_history);
-
-            AVandiniEliaBzGuessGame.moveCursor(box_offset + cursor_pos, CursorMoveDirection.COLUMN);
+            fancy_ui_printer(parent.attempts_left, false);
         }
         return "";
     }
